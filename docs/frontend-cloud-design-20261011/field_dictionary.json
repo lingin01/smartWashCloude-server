@@ -1,0 +1,3630 @@
+{
+  "status": "DESIGN_DRAFT",
+  "javaRelease": 17,
+  "date": "2026-10-11",
+  "nullableNote": "引用类型具备表达 null 的能力；不表示所有字段在每个合法请求/响应中均可为空。身份、枚举、时间和字段的条件必填规则见 README。",
+  "models": [
+    {
+      "class": "HomeQueryDto",
+      "layer": "DTO",
+      "purpose": "现有首页查询；tankCode 需要解析为唯一系统及盒子",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "当前前端资源参数，不能直接当作盒子编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenter.ts",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "WinchDetailQueryDto",
+      "layer": "DTO",
+      "purpose": "单台动力设备详情查询",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源选择参数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchCode",
+          "javaType": "String",
+          "meaning": "必须属于当前系统的绞机",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "WinchTrendQueryDto",
+      "layer": "DTO",
+      "purpose": "保留旧趋势查询，并补齐自然周期和分组筛选",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源选择参数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchCode",
+          "javaType": "String",
+          "meaning": "绞机编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "rangeType",
+          "javaType": "String",
+          "meaning": "REALTIME 当前页面表示今日；CURRENT_RUN/WEEK/MONTH/QUARTER/YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonType",
+          "javaType": "String",
+          "meaning": "NONE/PREVIOUS_RUN/HISTORY_AVERAGE/HISTORY_BASELINES/PREVIOUS_PERIOD/YEAR_ON_YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "metric",
+          "javaType": "String",
+          "meaning": "WINCH_TENSION/TRACTION_ROPE_TENSION 是兼容键，实际来源靠 ropeId/sensorId",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "quarter",
+          "javaType": "String",
+          "meaning": "旧调用使用 Q1/Q2/Q3/Q4",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "allQuarters",
+          "javaType": "Boolean",
+          "meaning": "旧接口兼容选项",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "viewType",
+          "javaType": "String",
+          "meaning": "SENSOR/TOTAL/AVERAGE",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "yearGrouping",
+          "javaType": "String",
+          "meaning": "MONTH/QUARTER/HALF_YEAR；MIXED 为旧入口兼容值",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "anchor",
+          "javaType": "String",
+          "meaning": "新增，用户选择的实际日期",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unitIds",
+          "javaType": "List<String>",
+          "meaning": "新增，服务端生成的轮次或周期选择项",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "displayUnit",
+          "javaType": "String",
+          "meaning": "新增，AUTO/KG/TON；兼容前端 T 时明确转换",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:WinchTrendQuery + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "HistoryListQueryDto",
+      "layer": "DTO",
+      "purpose": "当前历史列表查询，保留现有表单字段",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "systemCode",
+          "javaType": "String",
+          "meaning": "当前前端字段；仍需确认是否传 tankId 或 systemId",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts:HistoryQuery",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "scope",
+          "javaType": "String",
+          "meaning": "TODAY/MONTH/YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts:HistoryQuery",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "anchor",
+          "javaType": "String",
+          "meaning": "未传时使用上海当前日期",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/systemHistory.ts:HistoryQuery",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "page",
+          "javaType": "Integer",
+          "meaning": "从 1 开始",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts:HistoryQuery",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "pageSize",
+          "javaType": "Integer",
+          "meaning": "建议 1～100",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts:HistoryQuery",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "yearGrouping",
+          "javaType": "String",
+          "meaning": "MONTH/QUARTER/HALF_YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts:HistoryQuery",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "HistoryDetailQueryDto",
+      "layer": "DTO",
+      "purpose": "当前历史详情查询",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "systemCode",
+          "javaType": "String",
+          "meaning": "系统资源选择",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "recordCode",
+          "javaType": "String",
+          "meaning": "单轮稳定 ID 或服务端生成的周期 ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "yearGrouping",
+          "javaType": "String",
+          "meaning": "年度子记录分组方式",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "AlarmDashboardQueryDto",
+      "layer": "DTO",
+      "purpose": "当前告警筛选条件",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源选择参数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterAlarmPageApi",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "range",
+          "javaType": "String",
+          "meaning": "TODAY/7D/30D/CUSTOM",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterAlarmPageApi",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "deviceCode",
+          "javaType": "String",
+          "meaning": "可选，当前系统的绞机编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterAlarmPageApi",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "startDate",
+          "javaType": "String",
+          "meaning": "CUSTOM 时必填",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterAlarmPageApi",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "endDate",
+          "javaType": "String",
+          "meaning": "CUSTOM 时必填且不得晚于上海今天",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterAlarmPageApi",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "ArchiveQueryDto",
+      "layer": "DTO",
+      "purpose": "归档页左右两张图的独立查询条件",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源选择参数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchCode",
+          "javaType": "String",
+          "meaning": "可选绞机编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "metric",
+          "javaType": "String",
+          "meaning": "TENSION/SPEED/ALARM",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "tensionMetric",
+          "javaType": "String",
+          "meaning": "旧传感器角色键",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "period",
+          "javaType": "String",
+          "meaning": "WEEK/MONTH/QUARTER/YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonType",
+          "javaType": "String",
+          "meaning": "SELECTED_PERIODS/PREVIOUS_RUN/HISTORY_AVERAGE/PREVIOUS_PERIOD/YEAR_ON_YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "recordCode",
+          "javaType": "String",
+          "meaning": "运行对比所选记录",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "changeStart",
+          "javaType": "String",
+          "meaning": "左图范围起点",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "changeEnd",
+          "javaType": "String",
+          "meaning": "左图范围终点",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "compareStart",
+          "javaType": "String",
+          "meaning": "右图当前比较范围起点",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "compareEnd",
+          "javaType": "String",
+          "meaning": "右图基期范围起点，当前参数不足表达两段完整范围",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "compareCurrentEnd",
+          "javaType": "String",
+          "meaning": "新增，右图当前周期终点",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparePreviousEnd",
+          "javaType": "String",
+          "meaning": "新增，右图基期终点",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/commandCenterPages.ts:getCommandCenterArchivePageApi + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "ParameterSettingsForm",
+      "layer": "DTO",
+      "purpose": "当前页面三项表单，转换后复用 CloudCleaningSettingsDto",
+      "proposedPackage": "com.company.project.dto.cloud",
+      "fields": [
+        {
+          "name": "startTime",
+          "javaType": "String",
+          "meaning": "本地工艺启动时间",
+          "nullable": true,
+          "unitOrFormat": "HH:mm",
+          "source": "src/api/parameterSettings.ts:ParameterSettings",
+          "storage": "表单值经 Converter 写入版本化配置，不直接落表"
+        },
+        {
+          "name": "intervalMinutes",
+          "javaType": "Long",
+          "meaning": "页面当前要求 >=30 且为30的倍数",
+          "nullable": true,
+          "unitOrFormat": "分钟",
+          "source": "src/api/parameterSettings.ts:ParameterSettings",
+          "storage": "表单值经 Converter 写入版本化配置，不直接落表"
+        },
+        {
+          "name": "speedMPerMinute",
+          "javaType": "BigDecimal",
+          "meaning": "页面当前要求1～10整数，不能视作已确认现场限值",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "src/api/parameterSettings.ts:ParameterSettings",
+          "storage": "表单值经 Converter 写入版本化配置，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "FreshnessVo",
+      "layer": "VO",
+      "purpose": "新增公共采样可信度，不把缓存可读当成现场在线",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "available",
+          "javaType": "Boolean",
+          "meaning": "是否曾接收到可展示采样",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "freshness",
+          "javaType": "String",
+          "meaning": "FRESH/STALE/OFFLINE/UNKNOWN",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sampleTime",
+          "javaType": "Instant",
+          "meaning": "盒子采样时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "receivedAt",
+          "javaType": "Instant",
+          "meaning": "云端接收时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sequence",
+          "javaType": "Long",
+          "meaning": "同一流内采样序号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "streamId",
+          "javaType": "String",
+          "meaning": "盒子采样流或启动标识，协议待补",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "validRopeCount",
+          "javaType": "Integer",
+          "meaning": "本帧有效索通道数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "validWinchCount",
+          "javaType": "Integer",
+          "meaning": "本帧有效绞机通道数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "complete",
+          "javaType": "Boolean",
+          "meaning": "是否完整同帧",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "policyVersionApplied",
+          "javaType": "String",
+          "meaning": "盒子确认已应用的规则版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "TelemetrySample + 入站接收元数据（待扩展）",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CleanScrapingWinchVo",
+      "layer": "VO",
+      "purpose": "对应 CleanScrapingWinch，并补充数据有效性",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "winchCode",
+          "javaType": "String",
+          "meaning": "绞机稳定编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchName",
+          "javaType": "String",
+          "meaning": "档案显示名称",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "groupNo",
+          "javaType": "Integer",
+          "meaning": "配置槽位1～4",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "status",
+          "javaType": "String",
+          "meaning": "兼容状态字段，包含IDLE/EMERGENCY_STOP",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "operatingStatus",
+          "javaType": "String",
+          "meaning": "RUNNING/MAINTENANCE/FAULT/OFFLINE；待扩展IDLE/UNKNOWN",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "statusText",
+          "javaType": "String",
+          "meaning": "服务端中文显示文本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "direction",
+          "javaType": "String",
+          "meaning": "UP/DOWN/STOP，未知时为空",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "directionText",
+          "javaType": "String",
+          "meaning": "方向中文文本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "currentLoad",
+          "javaType": "BigDecimal",
+          "meaning": "同帧两索合计，由盒子明确提供",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "speed",
+          "javaType": "BigDecimal",
+          "meaning": "实际速度",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sensorCodes",
+          "javaType": "List<String>",
+          "meaning": "按配置槽位给出两传感器，缺绑定时报告不完整",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "valid",
+          "javaType": "Boolean",
+          "meaning": "当前数值是否有效",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 档案扩展 + TelemetrySample；currentLoad 上游待补",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CleanScrapingPressureSensorVo",
+      "layer": "VO",
+      "purpose": "对应 CleanScrapingPressureSensor；pressure 为历史字段名，语义为单索拉力",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "sensorCode",
+          "javaType": "String",
+          "meaning": "传感器稳定编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sensorName",
+          "javaType": "String",
+          "meaning": "显示名称",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "metric",
+          "javaType": "String",
+          "meaning": "旧角色键，来自明确绑定",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "businessRole",
+          "javaType": "String",
+          "meaning": "牵引索拉力传感器",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "groupNo",
+          "javaType": "Integer",
+          "meaning": "所属绞机槽位",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchCode",
+          "javaType": "String",
+          "meaning": "绞机稳定编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "position",
+          "javaType": "String",
+          "meaning": "配置位置",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "pressure",
+          "javaType": "BigDecimal",
+          "meaning": "单索实测拉力，未知返回null",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unit",
+          "javaType": "String",
+          "meaning": "兼容前端固定 t",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "safetyValue",
+          "javaType": "BigDecimal",
+          "meaning": "盒子生效的安全停机值，未确认返回null",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "thresholdMin",
+          "javaType": "BigDecimal",
+          "meaning": "旧字段语义尚未确认，不虚构低拉力阈值",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "thresholdMax",
+          "javaType": "BigDecimal",
+          "meaning": "兼容预警值字段",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "alarmThreshold",
+          "javaType": "BigDecimal",
+          "meaning": "盒子生效的预警值",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "status",
+          "javaType": "String",
+          "meaning": "NORMAL/WARNING/ALARM/OFFLINE，待扩展UNKNOWN/INVALID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "ropeId",
+          "javaType": "String",
+          "meaning": "新增，不能把索与传感器当成同一ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "valid",
+          "javaType": "Boolean",
+          "meaning": "单路测量有效性",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "policyVersionApplied",
+          "javaType": "String",
+          "meaning": "生效阈值版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningSystemTopologyBo + 绑定历史 + 盒子已应用规则 + TelemetrySample",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CommandCenterHomeVo",
+      "layer": "VO",
+      "purpose": "当前首页完整响应，推送可复用同一字段合同",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "前端兼容资源编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "tankName",
+          "javaType": "String",
+          "meaning": "罐体显示名称",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "tankStatus",
+          "javaType": "String",
+          "meaning": "兼容历史状态",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "tankStatusText",
+          "javaType": "String",
+          "meaning": "中文状态",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "systemStatus",
+          "javaType": "String",
+          "meaning": "粗粒度工况，不从拉力预警推断检修",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "online",
+          "javaType": "Boolean",
+          "meaning": "仅表示云盒连接，不代表全部设备安全正常",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "tankHeight",
+          "javaType": "BigDecimal",
+          "meaning": "罐体机械总行程",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "currentHeight",
+          "javaType": "BigDecimal",
+          "meaning": "盒子组高度，未知为null",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "isMoving",
+          "javaType": "Boolean",
+          "meaning": "盒子确认的运动事实",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "movementDirection",
+          "javaType": "String",
+          "meaning": "盒子确认方向",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "averageTension",
+          "javaType": "BigDecimal",
+          "meaning": "盒子完整八索帧平均值",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "averageSpeed",
+          "javaType": "BigDecimal",
+          "meaning": "盒子完整四机平均值",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "updatedAt",
+          "javaType": "String",
+          "meaning": "兼容显示时间，不代替sampleTime",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winches",
+          "javaType": "List<CleanScrapingWinchVo>",
+          "meaning": "四台绞机",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sensors",
+          "javaType": "List<CleanScrapingPressureSensorVo>",
+          "meaning": "八路拉力",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "systemId",
+          "javaType": "String",
+          "meaning": "新增明确系统编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "boxId",
+          "javaType": "String",
+          "meaning": "新增明确盒子编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sessionId",
+          "javaType": "String",
+          "meaning": "当前自动会话",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "roundNo",
+          "javaType": "Integer",
+          "meaning": "当前轮次",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataQuality",
+          "javaType": "FreshnessVo",
+          "meaning": "新增采样完整性和新鲜度",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudLobbyService.queryRealtime + CleaningDeviceDao + 档案扩展",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "TorqueForceVo",
+      "layer": "VO",
+      "purpose": "伺服电机换算拉力，不能直接将原始转矩标为吨",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "value",
+          "javaType": "BigDecimal",
+          "meaning": "已由盒子换算的电机拉力，缺换算为null",
+          "nullable": true,
+          "unitOrFormat": "kg或t",
+          "source": "盒子独立伺服反馈及标定；实时协议当前只含原始Nm，需扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unit",
+          "javaType": "String",
+          "meaning": "kg/t",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子独立伺服反馈及标定；实时协议当前只含原始Nm，需扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sourceName",
+          "javaType": "String",
+          "meaning": "伺服电机来源说明",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子独立伺服反馈及标定；实时协议当前只含原始Nm，需扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sourceRole",
+          "javaType": "String",
+          "meaning": "SERVO",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子独立伺服反馈及标定；实时协议当前只含原始Nm，需扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "calculationVersion",
+          "javaType": "String",
+          "meaning": "机械参数及换算版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子独立伺服反馈及标定；实时协议当前只含原始Nm，需扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "valid",
+          "javaType": "Boolean",
+          "meaning": "换算是否有效",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子独立伺服反馈及标定；实时协议当前只含原始Nm，需扩展",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "WinchRunRecordSummaryVo",
+      "layer": "VO",
+      "purpose": "单绞机页面关联整组轮次，不创建4份独立清洗作业",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "recordCode",
+          "javaType": "String",
+          "meaning": "全组轮次稳定ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "startedAt",
+          "javaType": "String",
+          "meaning": "开始时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "completedAt",
+          "javaType": "String",
+          "meaning": "结束时刻，当前轮为空",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "state",
+          "javaType": "String",
+          "meaning": "RUNNING/COMPLETED",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "result",
+          "javaType": "String",
+          "meaning": "轮次实际终态",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "mode",
+          "javaType": "String",
+          "meaning": "AUTO/MANUAL是旧字段，不替代自动/检修归属",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "durationSeconds",
+          "javaType": "Long",
+          "meaning": "运行秒数",
+          "nullable": true,
+          "unitOrFormat": "s",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "progressPercent",
+          "javaType": "BigDecimal",
+          "meaning": "服务端固定进度合同，未完成不拉满",
+          "nullable": true,
+          "unitOrFormat": "%",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sequenceNo",
+          "javaType": "Integer",
+          "meaning": "页面日期内显示序号，不做数据库主键",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sessionId",
+          "javaType": "String",
+          "meaning": "新增自动会话ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "roundNo",
+          "javaType": "Integer",
+          "meaning": "新增会话内轮次号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CommandCenterWinchDetailVo",
+      "layer": "VO",
+      "purpose": "对应 CommandCenterWinchDetailData",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "torqueForce",
+          "javaType": "TorqueForceVo",
+          "meaning": "独立电机换算拉力",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "updatedAt",
+          "javaType": "String",
+          "meaning": "显示时间",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winch",
+          "javaType": "CleanScrapingWinchVo",
+          "meaning": "当前绞机",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sensors",
+          "javaType": "List<CleanScrapingPressureSensorVo>",
+          "meaning": "本绞机两路传感器",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "ratedLoad",
+          "javaType": "BigDecimal",
+          "meaning": "档案额定载荷",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "ratedSpeed",
+          "javaType": "BigDecimal",
+          "meaning": "档案额定速度",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "runningHours",
+          "javaType": "BigDecimal",
+          "meaning": "唯一权威累计运行计时，未知为null",
+          "nullable": true,
+          "unitOrFormat": "h",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "maintenanceAt",
+          "javaType": "String",
+          "meaning": "最近真实维护时刻，未知为null",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "currentHeight",
+          "javaType": "BigDecimal",
+          "meaning": "实际高度",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "todayRunCount",
+          "javaType": "Integer",
+          "meaning": "上海今日完成的整组有效轮次",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "currentRecord",
+          "javaType": "WinchRunRecordSummaryVo",
+          "meaning": "当前轮次摘要",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "previousRecord",
+          "javaType": "WinchRunRecordSummaryVo",
+          "meaning": "上一轮次摘要",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "historySampleCount",
+          "javaType": "Long",
+          "meaning": "统计查询参与记录数；不与遥测点数混同",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataQuality",
+          "javaType": "FreshnessVo",
+          "meaning": "新增采样状态",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "首页同源快照 + 档案 + 轮次查询 + 检修记录",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "TrendRangeVo",
+      "layer": "VO",
+      "purpose": "统一自然周期范围，业务查询为左闭右开",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "startTime",
+          "javaType": "Instant",
+          "meaning": "含起点",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "StatisticsPeriodResolver",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "endTime",
+          "javaType": "Instant",
+          "meaning": "不含终点",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "StatisticsPeriodResolver",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "timezone",
+          "javaType": "String",
+          "meaning": "Asia/Shanghai",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "StatisticsPeriodResolver",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "AxisHintVo",
+      "layer": "VO",
+      "purpose": "拉力展示坐标轴，不作为设备物理量程",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "min",
+          "javaType": "BigDecimal",
+          "meaning": "展示下界",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "StatisticsResultBo.yAxis + 图表投影",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "max",
+          "javaType": "BigDecimal",
+          "meaning": "展示上界",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "StatisticsResultBo.yAxis + 图表投影",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "decimalPlaces",
+          "javaType": "Integer",
+          "meaning": "展示小数位",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "StatisticsResultBo.yAxis + 图表投影",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "HeightRangeVo",
+      "layer": "VO",
+      "purpose": "高度坐标范围与拉力轴明确分开",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "min",
+          "javaType": "BigDecimal",
+          "meaning": "实际有效高度下界",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "实际曲线点或有效设备行程",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "max",
+          "javaType": "BigDecimal",
+          "meaning": "实际有效高度上界",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "实际曲线点或有效设备行程",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "WinchTensionTrendPointVo",
+      "layer": "VO",
+      "purpose": "曲线点保留真实时间、高度、方向和缺测信息",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "time",
+          "javaType": "Instant",
+          "meaning": "真实采样或聚合桶时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "progressPercent",
+          "javaType": "BigDecimal",
+          "meaning": "轮次进度，周期点不得假造",
+          "nullable": true,
+          "unitOrFormat": "%",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "elapsedSeconds",
+          "javaType": "Long",
+          "meaning": "本轮经过秒数",
+          "nullable": true,
+          "unitOrFormat": "s",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "height",
+          "javaType": "BigDecimal",
+          "meaning": "测量高度，缺失返回null",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "speed",
+          "javaType": "BigDecimal",
+          "meaning": "实际速度",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "direction",
+          "javaType": "String",
+          "meaning": "UP/DOWN/STOP",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "value",
+          "javaType": "BigDecimal",
+          "meaning": "缺测返回null",
+          "nullable": true,
+          "unitOrFormat": "曲线unit",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "min",
+          "javaType": "BigDecimal",
+          "meaning": "桶内最小值",
+          "nullable": true,
+          "unitOrFormat": "曲线unit",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "max",
+          "javaType": "BigDecimal",
+          "meaning": "桶内最大值",
+          "nullable": true,
+          "unitOrFormat": "曲线unit",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sampleCount",
+          "javaType": "Long",
+          "meaning": "参与统计的有效原始点数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "quality",
+          "javaType": "String",
+          "meaning": "GOOD/PARTIAL/INVALID/OFFLINE",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sessionId",
+          "javaType": "String",
+          "meaning": "新增真实自动会话",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "roundNo",
+          "javaType": "Integer",
+          "meaning": "新增轮次",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "policyVersion",
+          "javaType": "String",
+          "meaning": "新增本点配置版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实保留点 + StatisticsResultBo；分段统计不足以重建真实波形",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "WinchTensionTrendSeriesVo",
+      "layer": "VO",
+      "purpose": "对应 WinchTensionTrendSeries，独立伺服和双索来源不混同",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "sourceRole",
+          "javaType": "String",
+          "meaning": "SENSOR1/SENSOR2/SERVO",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "metric",
+          "javaType": "String",
+          "meaning": "兼容前端角色键",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "name",
+          "javaType": "String",
+          "meaning": "展示名称",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sourceSensorCode",
+          "javaType": "String",
+          "meaning": "SENSOR必填；SERVO不得伪造传感器ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sourceSensorName",
+          "javaType": "String",
+          "meaning": "来源显示名",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "periodRole",
+          "javaType": "String",
+          "meaning": "CURRENT/COMPARISON/WEEK_BASELINE/MONTH_BASELINE/YEAR_BASELINE",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unitId",
+          "javaType": "String",
+          "meaning": "服务端生成的轮次或周期ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "points",
+          "javaType": "List<WinchTensionTrendPointVo>",
+          "meaning": "按真实时间和阶段排序",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "ropeId",
+          "javaType": "String",
+          "meaning": "新增物理索标识",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchId",
+          "javaType": "String",
+          "meaning": "新增绞机标识",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "calculationVersion",
+          "javaType": "String",
+          "meaning": "电机力或派生指标计算版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实测点身份及 CloudStatisticsService 查询",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "TrendUnitVo",
+      "layer": "VO",
+      "purpose": "选择批次、周、月、季度、半年；空桶仍返回",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "id",
+          "javaType": "String",
+          "meaning": "服务端稳定选择ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "name",
+          "javaType": "String",
+          "meaning": "显示名称",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "rangeLabel",
+          "javaType": "String",
+          "meaning": "日期范围文字",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "startAt",
+          "javaType": "Instant",
+          "meaning": "起点",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "endAt",
+          "javaType": "Instant",
+          "meaning": "终点",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "abnormal",
+          "javaType": "Boolean",
+          "meaning": "有已确认异常",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "empty",
+          "javaType": "Boolean",
+          "meaning": "无符合口径的数据",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataThrough",
+          "javaType": "Instant",
+          "meaning": "实际统计截止时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sampleCount",
+          "javaType": "Long",
+          "meaning": "参与的原始轮次记录数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService + 自然日历",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "TrendSummaryVo",
+      "layer": "VO",
+      "purpose": "全范围汇总保持原始权重",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "unit",
+          "javaType": "TrendUnitVo",
+          "meaning": "汇总范围",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo / 时间权重扩展",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "series",
+          "javaType": "List<WinchTensionTrendSeriesVo>",
+          "meaning": "汇总曲线；高度分桶规则必须固定",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo / 时间权重扩展",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "WinchTrendUnitSetVo",
+      "layer": "VO",
+      "purpose": "直接满足当前 power-detail 页分组模型，取消WHOLE适配降级",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "kind",
+          "javaType": "String",
+          "meaning": "BATCH/WEEK/MONTH/PERIOD/WHOLE",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "units",
+          "javaType": "List<TrendUnitVo>",
+          "meaning": "完整可选项",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "series",
+          "javaType": "List<WinchTensionTrendSeriesVo>",
+          "meaning": "带unitId的曲线",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "heightMin",
+          "javaType": "BigDecimal",
+          "meaning": "有效高度下界",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "heightMax",
+          "javaType": "BigDecimal",
+          "meaning": "有效高度上界",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "updatedAt",
+          "javaType": "Instant",
+          "meaning": "数据截止时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "demo",
+          "javaType": "Boolean",
+          "meaning": "正式数据固定false",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "capabilityNote",
+          "javaType": "String",
+          "meaning": "实际缺少能力的中文说明",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "summary",
+          "javaType": "TrendSummaryVo",
+          "meaning": "全范围加权汇总",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unit",
+          "javaType": "String",
+          "meaning": "新增曲线力单位，t/kg",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "axisType",
+          "javaType": "String",
+          "meaning": "新增TIME/HEIGHT/PROGRESS",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:WinchTrendUnitSetData + 本次新增设计",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CommandCenterWinchTensionTrendVo",
+      "layer": "VO",
+      "purpose": "兼容现有生产趋势入口，不与单位集合响应混用",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchCode",
+          "javaType": "String",
+          "meaning": "绞机编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "rangeType",
+          "javaType": "String",
+          "meaning": "查看范围",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonType",
+          "javaType": "String",
+          "meaning": "比较方式",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "metric",
+          "javaType": "String",
+          "meaning": "角色键",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "range",
+          "javaType": "TrendRangeVo",
+          "meaning": "当前范围",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonRange",
+          "javaType": "TrendRangeVo",
+          "meaning": "基期范围",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "bucket",
+          "javaType": "String",
+          "meaning": "采样或分桶说明",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unit",
+          "javaType": "String",
+          "meaning": "t",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "axisHint",
+          "javaType": "AxisHintVo",
+          "meaning": "拉力展示轴",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "heightRange",
+          "javaType": "HeightRangeVo",
+          "meaning": "高度展示轴",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "series",
+          "javaType": "List<WinchTensionTrendSeriesVo>",
+          "meaning": "曲线列表",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "currentAverage",
+          "javaType": "BigDecimal",
+          "meaning": "原始统计量计算的当前均值",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonAverage",
+          "javaType": "BigDecimal",
+          "meaning": "基期均值",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "difference",
+          "javaType": "BigDecimal",
+          "meaning": "当前减基期",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "changeRate",
+          "javaType": "BigDecimal",
+          "meaning": "基期0或缺失时为null",
+          "nullable": true,
+          "unitOrFormat": "%",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "updatedAt",
+          "javaType": "Instant",
+          "meaning": "数据截止时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparable",
+          "javaType": "Boolean",
+          "meaning": "新增可比较标志",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonReason",
+          "javaType": "String",
+          "meaning": "新增不能比较的原因",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/types/index.ts:CommandCenterWinchTensionTrendData + StatisticsResultBo",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "SystemHistoryExceptionEventVo",
+      "layer": "VO",
+      "purpose": "一次现场异常的处理结果，事件次数与尝试次数分开",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "occurredAt",
+          "javaType": "Instant",
+          "meaning": "异常发生时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "盒子异常事件扩展",
+          "storage": "cleaning_exception_event"
+        },
+        {
+          "name": "attemptCount",
+          "javaType": "Integer",
+          "meaning": "原始上报尝试次数；最多5次为前端需求待PLC确认",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子异常事件扩展",
+          "storage": "cleaning_exception_event"
+        },
+        {
+          "name": "outcome",
+          "javaType": "String",
+          "meaning": "RECOVERED/FAILED；待扩展UNKNOWN/PROCESSING",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子异常事件扩展",
+          "storage": "cleaning_exception_event"
+        },
+        {
+          "name": "eventId",
+          "javaType": "String",
+          "meaning": "新增稳定异常事件ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "盒子异常事件扩展",
+          "storage": "cleaning_exception_event"
+        },
+        {
+          "name": "recoveredAt",
+          "javaType": "Instant",
+          "meaning": "新增确认恢复时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "盒子异常事件扩展",
+          "storage": "cleaning_exception_event"
+        }
+      ]
+    },
+    {
+      "class": "SystemHistoryEntryVo",
+      "layer": "VO",
+      "purpose": "当前 RUN=单轮；日/月/季度/半年/年=统计投影",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "id",
+          "javaType": "String",
+          "meaning": "轮次稳定ID或服务端周期ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "kind",
+          "javaType": "String",
+          "meaning": "RUN/DAY/MONTH/QUARTER/HALF_YEAR/YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "name",
+          "javaType": "String",
+          "meaning": "显示名称",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "startDate",
+          "javaType": "String",
+          "meaning": "上海统计起始日期",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "endDate",
+          "javaType": "String",
+          "meaning": "上海统计末日期，展示含终点",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "startedAt",
+          "javaType": "Instant",
+          "meaning": "单轮开始时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "endedAt",
+          "javaType": "Instant",
+          "meaning": "单轮结束时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "durationSeconds",
+          "javaType": "Long",
+          "meaning": "持续秒数",
+          "nullable": true,
+          "unitOrFormat": "s",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "startMethod",
+          "javaType": "String",
+          "meaning": "实际SCHEDULED/MANUAL，缺证据为null",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sequenceNo",
+          "javaType": "Integer",
+          "meaning": "当日显示序号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "statusText",
+          "javaType": "String",
+          "meaning": "中文结果文字",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "runResult",
+          "javaType": "String",
+          "meaning": "实际终态，需扩展当前COMPLETED/FAULT_TERMINATED二值模型",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "exceptionEvents",
+          "javaType": "List<SystemHistoryExceptionEventVo>",
+          "meaning": "未知为空；已确认无异常为[]",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "runCount",
+          "javaType": "Long",
+          "meaning": "终态轮次总数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "completedCount",
+          "javaType": "Long",
+          "meaning": "完成总数=正常完成+异常恢复后完成",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "normalCompletedCount",
+          "javaType": "Long",
+          "meaning": "无异常且证据完整的完成轮次",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "recoveredCount",
+          "javaType": "Long",
+          "meaning": "异常恢复后完成轮次，按轮去重",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "faultTerminatedCount",
+          "javaType": "Long",
+          "meaning": "故障终止轮次，其他终止不冒充故障",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "abnormalCount",
+          "javaType": "Long",
+          "meaning": "异常事件数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "alarmCount",
+          "javaType": "Long",
+          "meaning": "去重设备告警事件数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "empty",
+          "javaType": "Boolean",
+          "meaning": "无轮次数据",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sessionId",
+          "javaType": "String",
+          "meaning": "新增会话ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "roundNo",
+          "javaType": "Integer",
+          "meaning": "新增轮次号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "stopReason",
+          "javaType": "String",
+          "meaning": "新增实际结束原因",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataComplete",
+          "javaType": "Boolean",
+          "meaning": "新增事件/统计数据是否完整",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "otherTerminatedCount",
+          "javaType": "Long",
+          "meaning": "新增急停/人员结束等其他終态计数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CleaningRoundEntity + CleaningSessionEntity + 异常事件 + 统计桶",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "SystemHistoryYearSummaryVo",
+      "layer": "VO",
+      "purpose": "全年总览先计算再分页",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "year",
+          "javaType": "Integer",
+          "meaning": "统计年",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "全年完整查询，不只累加当前页",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "runCount",
+          "javaType": "Long",
+          "meaning": "全年轮次总数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "全年完整查询，不只累加当前页",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "normalCompletedCount",
+          "javaType": "Long",
+          "meaning": "全年正常完成",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "全年完整查询，不只累加当前页",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "recoveredCount",
+          "javaType": "Long",
+          "meaning": "全年恢复后完成",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "全年完整查询，不只累加当前页",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "faultTerminatedCount",
+          "javaType": "Long",
+          "meaning": "全年故障终止",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "全年完整查询，不只累加当前页",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "otherTerminatedCount",
+          "javaType": "Long",
+          "meaning": "新增其他终态",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "全年完整查询，不只累加当前页",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataComplete",
+          "javaType": "Boolean",
+          "meaning": "新增完整性",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "全年完整查询，不只累加当前页",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "SystemHistoryListVo",
+      "layer": "VO",
+      "purpose": "当前历史列表响应不是 PageResult.list",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "entries",
+          "javaType": "List<SystemHistoryEntryVo>",
+          "meaning": "当前页记录",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "total",
+          "javaType": "Long",
+          "meaning": "全条件记录数，不是当前页大小",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "anchor",
+          "javaType": "String",
+          "meaning": "实际日期锚点",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "asOf",
+          "javaType": "String",
+          "meaning": "服务端统计日期；保留当前前端日期格式",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "enabledFrom",
+          "javaType": "String",
+          "meaning": "首个有数据的上海日期",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataYears",
+          "javaType": "List<Integer>",
+          "meaning": "有实际数据的年份",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "yearSummary",
+          "javaType": "SystemHistoryYearSummaryVo",
+          "meaning": "YEAR范围使用",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataThrough",
+          "javaType": "Instant",
+          "meaning": "新增数据实际截止时刻，不能以整日表示采样新鲜度",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "src/api/systemHistory.ts + 轮次/自然日历",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "SystemHistoryCurveVo",
+      "layer": "VO",
+      "purpose": "当前历史高度曲线，8索与4电机独立",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "id",
+          "javaType": "String",
+          "meaning": "稳定测点/曲线ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "name",
+          "javaType": "String",
+          "meaning": "显示名称",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "groupNo",
+          "javaType": "Integer",
+          "meaning": "绞机槽位",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "ropeNo",
+          "javaType": "Integer",
+          "meaning": "1/2；电机曲线为null",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "points",
+          "javaType": "List<WinchTensionTrendPointVo>",
+          "meaning": "真实点或明确算法版本的统计曲线",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "displayMin",
+          "javaType": "BigDecimal",
+          "meaning": "图表显示下界，未知为null",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "displayMax",
+          "javaType": "BigDecimal",
+          "meaning": "图表显示上界，未知为null",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unit",
+          "javaType": "String",
+          "meaning": "新增t/kg",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sourceRole",
+          "javaType": "String",
+          "meaning": "新增SENSOR1/SENSOR2/SERVO",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "calculationVersion",
+          "javaType": "String",
+          "meaning": "新增派生计算版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "真实曲线点 + 配置快照",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "HistoryTimelineItemVo",
+      "layer": "VO",
+      "purpose": "周期详情的日/月子时间段",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "entry",
+          "javaType": "SystemHistoryEntryVo",
+          "meaning": "周期子记录",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "SystemHistoryDetail.timeline",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sensors",
+          "javaType": "List<SystemHistoryCurveVo>",
+          "meaning": "该子区间索曲线",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "SystemHistoryDetail.timeline",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "servos",
+          "javaType": "List<SystemHistoryCurveVo>",
+          "meaning": "该子区间电机曲线",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "SystemHistoryDetail.timeline",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "SystemHistoryDetailVo",
+      "layer": "VO",
+      "purpose": "当前历史详情，独立于旧 CommandCenterRecordPageData",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "entry",
+          "javaType": "SystemHistoryEntryVo",
+          "meaning": "轮次或周期主摘要",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "sensors",
+          "javaType": "List<SystemHistoryCurveVo>",
+          "meaning": "索曲线",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "servos",
+          "javaType": "List<SystemHistoryCurveVo>",
+          "meaning": "独立电机力曲线",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "heightMin",
+          "javaType": "BigDecimal",
+          "meaning": "高度下界",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "heightMax",
+          "javaType": "BigDecimal",
+          "meaning": "高度上界",
+          "nullable": true,
+          "unitOrFormat": "m",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "alarms",
+          "javaType": "List<CommandCenterAlarmVo>",
+          "meaning": "当前前端RUN不使用；日/月等按条件查询",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "timeline",
+          "javaType": "List<HistoryTimelineItemVo>",
+          "meaning": "周期时间分组",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "children",
+          "javaType": "List<SystemHistoryEntryVo>",
+          "meaning": "下一层记录",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "dataComplete",
+          "javaType": "Boolean",
+          "meaning": "新增数据完整性",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "capabilityNote",
+          "javaType": "String",
+          "meaning": "新增缺测或协议能力说明",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/systemHistory.ts + 轮次/测点/告警查询",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CommandCenterAlarmVo",
+      "layer": "VO",
+      "purpose": "兼容前端告警项，并补齐唯一事件ID和独立恢复/处置状态",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "alarmCode",
+          "javaType": "String",
+          "meaning": "告警类型码，不作为唯一事件ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "deviceCode",
+          "javaType": "String",
+          "meaning": "作用设备",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "sensorCode",
+          "javaType": "String",
+          "meaning": "作用传感器，可空",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "sourceGroupNo",
+          "javaType": "Integer",
+          "meaning": "发生时绞机槽位",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "sourceMetric",
+          "javaType": "String",
+          "meaning": "发生时角色键",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "thresholdKind",
+          "javaType": "String",
+          "meaning": "WARNING/PROTECTION，与严重等级分开",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "type",
+          "javaType": "String",
+          "meaning": "中文分类",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "content",
+          "javaType": "String",
+          "meaning": "保留盒子中文原始提示",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "level",
+          "javaType": "String",
+          "meaning": "NORMAL/MEDIUM/SERIOUS为页面兼容等级",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "state",
+          "javaType": "String",
+          "meaning": "ACTIVE/RECOVERED/ARCHIVED为页面兼容状态",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "handling",
+          "javaType": "String",
+          "meaning": "FIELD_REQUIRED/AUTO_ARCHIVE",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "triggerValue",
+          "javaType": "BigDecimal",
+          "meaning": "实际触发值",
+          "nullable": true,
+          "unitOrFormat": "unit",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "threshold",
+          "javaType": "BigDecimal",
+          "meaning": "发生时生效阈值",
+          "nullable": true,
+          "unitOrFormat": "unit",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "occurredAt",
+          "javaType": "Instant",
+          "meaning": "盒子事件发生时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "recoveredAt",
+          "javaType": "Instant",
+          "meaning": "盒子确认恢复时刻",
+          "nullable": true,
+          "unitOrFormat": "ISO-8601",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "eventId",
+          "javaType": "String",
+          "meaning": "新增唯一事件ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "source",
+          "javaType": "String",
+          "meaning": "新增BOX_DEVICE/CLOUD_PLATFORM/BOX_SYSTEM",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "unit",
+          "javaType": "String",
+          "meaning": "新增kg/t/m/min等明确单位",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "ropeId",
+          "javaType": "String",
+          "meaning": "新增发生时索ID",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "policyVersion",
+          "javaType": "String",
+          "meaning": "新增发生时规则版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "actualAction",
+          "javaType": "String",
+          "meaning": "新增盒子实际动作",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "handlingState",
+          "javaType": "String",
+          "meaning": "新增人工处置状态，不等于设备恢复",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        },
+        {
+          "name": "revision",
+          "javaType": "Long",
+          "meaning": "新增状态同步版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarm + 协议扩展 + 发生时配置快照",
+          "storage": "cleaning_alarm_event"
+        }
+      ]
+    },
+    {
+      "class": "AlarmStatisticPointVo",
+      "layer": "VO",
+      "purpose": "去重告警按上海日期统计",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "label",
+          "javaType": "String",
+          "meaning": "日期显示",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "cleaning_alarm_event 条件聚合",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "normal",
+          "javaType": "Long",
+          "meaning": "一般告警数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "cleaning_alarm_event 条件聚合",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "serious",
+          "javaType": "Long",
+          "meaning": "严重告警数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "cleaning_alarm_event 条件聚合",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CategoryCountVo",
+      "layer": "VO",
+      "purpose": "告警类别统计",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "name",
+          "javaType": "String",
+          "meaning": "类别中文",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "cleaning_alarm_event 条件聚合",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "value",
+          "javaType": "Long",
+          "meaning": "去重事件数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "cleaning_alarm_event 条件聚合",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "AlarmHistoryRangeVo",
+      "layer": "VO",
+      "purpose": "前端筛选日期展示",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "startDate",
+          "javaType": "String",
+          "meaning": "含起始日期",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "AlarmDashboardQueryDto",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "endDate",
+          "javaType": "String",
+          "meaning": "含终止日期",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "AlarmDashboardQueryDto",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CommandCenterAlarmDashboardVo",
+      "layer": "VO",
+      "purpose": "当前告警大屏响应",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "asOf",
+          "javaType": "String",
+          "meaning": "统计日期",
+          "nullable": true,
+          "unitOrFormat": "yyyy-MM-dd",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "demo",
+          "javaType": "Boolean",
+          "meaning": "正式数据为false",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "todayCount",
+          "javaType": "Long",
+          "meaning": "今日发生的设备告警",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "todayRecoveredCount",
+          "javaType": "Long",
+          "meaning": "今日恢复数，恢复事件时间独立统计",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "recoveredCount",
+          "javaType": "Long",
+          "meaning": "筛选范围内恢复数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "historyRange",
+          "javaType": "AlarmHistoryRangeVo",
+          "meaning": "实际筛选范围",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "activeCount",
+          "javaType": "Long",
+          "meaning": "当前未恢复设备告警",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "seriousActiveCount",
+          "javaType": "Long",
+          "meaning": "当前严重未恢复设备告警",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "recent",
+          "javaType": "List<CommandCenterAlarmVo>",
+          "meaning": "当前或最近去重事件",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "history",
+          "javaType": "List<CommandCenterAlarmVo>",
+          "meaning": "筛选范围历史事件",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "trend",
+          "javaType": "List<AlarmStatisticPointVo>",
+          "meaning": "日期统计",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "categoryCounts",
+          "javaType": "List<CategoryCountVo>",
+          "meaning": "类型统计",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "historyTotal",
+          "javaType": "Long",
+          "meaning": "新增历史总数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "historyTruncated",
+          "javaType": "Boolean",
+          "meaning": "新增是否截断，后续历史分页接口读取全部",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudAlarmService 查询扩展 + cleaning_alarm_event",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "ArchivePointVo",
+      "layer": "VO",
+      "purpose": "归档图表点；无数据不填0",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "label",
+          "javaType": "String",
+          "meaning": "桶显示标签",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "StatisticsResultBo 桶 + 告警聚合",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "tension",
+          "javaType": "BigDecimal",
+          "meaning": "符合选择对象的拉力",
+          "nullable": true,
+          "unitOrFormat": "t",
+          "source": "StatisticsResultBo 桶 + 告警聚合",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "speed",
+          "javaType": "BigDecimal",
+          "meaning": "实测速度",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "StatisticsResultBo 桶 + 告警聚合",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "normalAlarms",
+          "javaType": "Long",
+          "meaning": "一般事件数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "StatisticsResultBo 桶 + 告警聚合",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "seriousAlarms",
+          "javaType": "Long",
+          "meaning": "严重事件数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "StatisticsResultBo 桶 + 告警聚合",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "ArchiveSummaryVo",
+      "layer": "VO",
+      "purpose": "归档统计汇总，0基期不可比较",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "average",
+          "javaType": "BigDecimal",
+          "meaning": "原始加权均值",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "maximum",
+          "javaType": "BigDecimal",
+          "meaning": "原始有效最大值",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "minimum",
+          "javaType": "BigDecimal",
+          "meaning": "原始有效最小值",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "changeRate",
+          "javaType": "BigDecimal",
+          "meaning": "基期无效为null",
+          "nullable": true,
+          "unitOrFormat": "%",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "normalAlarmCount",
+          "javaType": "Long",
+          "meaning": "一般事件数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "seriousAlarmCount",
+          "javaType": "Long",
+          "meaning": "严重事件数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparable",
+          "javaType": "Boolean",
+          "meaning": "新增可比性",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonReason",
+          "javaType": "String",
+          "meaning": "新增不可比较原因",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "MetricAccumulatorBo + StatisticsComparisonCalculator",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "CommandCenterArchiveVo",
+      "layer": "VO",
+      "purpose": "当前数据归档响应",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "tankCode",
+          "javaType": "String",
+          "meaning": "资源编号",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "winchCode",
+          "javaType": "String",
+          "meaning": "当前绞机",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "metric",
+          "javaType": "String",
+          "meaning": "TENSION/SPEED/ALARM",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "period",
+          "javaType": "String",
+          "meaning": "WEEK/MONTH/QUARTER/YEAR",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonType",
+          "javaType": "String",
+          "meaning": "比较方式",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonTitle",
+          "javaType": "String",
+          "meaning": "服务端比较说明",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonAxis",
+          "javaType": "String",
+          "meaning": "TIME/PROGRESS",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "historySampleCount",
+          "javaType": "Long",
+          "meaning": "参与的原始轮次记录数",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "changePoints",
+          "javaType": "List<ArchivePointVo>",
+          "meaning": "左侧变化图",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonCurrent",
+          "javaType": "List<ArchivePointVo>",
+          "meaning": "右侧当前周期",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "comparisonPrevious",
+          "javaType": "List<ArchivePointVo>",
+          "meaning": "右侧基期",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "summary",
+          "javaType": "ArchiveSummaryVo",
+          "meaning": "汇总值",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "unit",
+          "javaType": "String",
+          "meaning": "新增明确当前指标单位",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudStatisticsService.query + 归档转换器",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "ParameterLimitsVo",
+      "layer": "VO",
+      "purpose": "页面输入规则与现场工艺限值分开",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "minIntervalMinutes",
+          "javaType": "Long",
+          "meaning": "当前前端最小30分钟",
+          "nullable": true,
+          "unitOrFormat": "min",
+          "source": "src/api/parameterSettings.ts + 待确认现场规则",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "intervalStepMinutes",
+          "javaType": "Long",
+          "meaning": "当前前端步长30分钟",
+          "nullable": true,
+          "unitOrFormat": "min",
+          "source": "src/api/parameterSettings.ts + 待确认现场规则",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "minSpeedMPerMinute",
+          "javaType": "BigDecimal",
+          "meaning": "当前前端1，现场确认后由配置返回",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "src/api/parameterSettings.ts + 待确认现场规则",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "maxSpeedMPerMinute",
+          "javaType": "BigDecimal",
+          "meaning": "当前前端10，现场确认后由配置返回",
+          "nullable": true,
+          "unitOrFormat": "m/min",
+          "source": "src/api/parameterSettings.ts + 待确认现场规则",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "source",
+          "javaType": "String",
+          "meaning": "UI_CONTRACT/FIELD_CONFIRMED",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/parameterSettings.ts + 待确认现场规则",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "version",
+          "javaType": "String",
+          "meaning": "规则版本",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "src/api/parameterSettings.ts + 待确认现场规则",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    },
+    {
+      "class": "ParameterSettingsPageVo",
+      "layer": "VO",
+      "purpose": "页面配置查询；settings只代表盒子已应用值",
+      "proposedPackage": "com.company.project.vo.cloud",
+      "fields": [
+        {
+          "name": "systemId",
+          "javaType": "String",
+          "meaning": "明确目标系统",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "boxId",
+          "javaType": "String",
+          "meaning": "明确目标盒子",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "state",
+          "javaType": "String",
+          "meaning": "NOT_SYNCHRONIZED/APPLIED/UNKNOWN",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "version",
+          "javaType": "Long",
+          "meaning": "盒子已应用版本；未同步为空",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "settings",
+          "javaType": "ParameterSettingsForm",
+          "meaning": "已应用配置；未同步为空",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "defaults",
+          "javaType": "ParameterSettingsForm",
+          "meaning": "来自工艺配置，禁止直接采用演示默认值",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "limits",
+          "javaType": "ParameterLimitsVo",
+          "meaning": "表单输入约束",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "writable",
+          "javaType": "Boolean",
+          "meaning": "可信版本和目标是否已同步",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        },
+        {
+          "name": "pendingRequestId",
+          "javaType": "String",
+          "meaning": "在途更新请求",
+          "nullable": true,
+          "unitOrFormat": "",
+          "source": "CloudSettingsViewBo + 已应用配置快照",
+          "storage": "查询结果，不直接落表"
+        }
+      ]
+    }
+  ]
+}
