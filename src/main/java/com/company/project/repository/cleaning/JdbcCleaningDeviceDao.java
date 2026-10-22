@@ -12,11 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/** 保存一套清洗系统与盒子、4 台绞机、8 个拉力传感器的固定映射。 */
+/** 保存一套清洗系统与PLC、4 台绞机、8 个拉力传感器的固定映射。 */
 @Repository
 public class JdbcCleaningDeviceDao implements CleaningDeviceDao {
     private static final String SELECT_TOPOLOGY =
-            "SELECT s.tank_id,s.system_id,s.box_id,s.ring_id,s.ring_own_weight_kg,"
+            "SELECT s.tank_id,s.system_id,s.device_id,s.ring_id,s.ring_own_weight_kg,"
                     + "w.winch_id,r.rope_id,r.tension_sensor_id "
                     + "FROM cleaning_system s "
                     + "LEFT JOIN cleaning_winch w ON w.system_id=s.system_id "
@@ -28,8 +28,8 @@ public class JdbcCleaningDeviceDao implements CleaningDeviceDao {
     }
 
     @Override
-    public Optional<CleaningSystemTopologyBo> findByBoxId(String boxId) {
-        return find(SELECT_TOPOLOGY + "WHERE s.box_id=? ORDER BY w.slot_no,r.slot_no", boxId);
+    public Optional<CleaningSystemTopologyBo> findByDeviceId(String deviceId) {
+        return find(SELECT_TOPOLOGY + "WHERE s.device_id=? ORDER BY w.slot_no,r.slot_no", deviceId);
     }
 
     @Override
@@ -40,7 +40,7 @@ public class JdbcCleaningDeviceDao implements CleaningDeviceDao {
     private Optional<CleaningSystemTopologyBo> find(String sql, String key) {
         List<TopologyRow> rows = jdbc.query(sql, (result, ignored) -> new TopologyRow(
                 result.getString("tank_id"), result.getString("system_id"),
-                result.getString("box_id"), result.getString("ring_id"),
+                result.getString("device_id"), result.getString("ring_id"),
                 result.getBigDecimal("ring_own_weight_kg"), result.getString("winch_id"),
                 result.getString("rope_id"), result.getString("tension_sensor_id")), key);
         if (rows.isEmpty()) return Optional.empty();
@@ -59,7 +59,7 @@ public class JdbcCleaningDeviceDao implements CleaningDeviceDao {
                 .toList();
         TopologyRow first = rows.get(0);
         CleaningSystemTopologyBo topology = new CleaningSystemTopologyBo(first.tankId(),
-                first.systemId(), first.boxId(), first.ringId(), first.ringOwnWeightKg(), winches);
+                first.systemId(), first.deviceId(), first.ringId(), first.ringOwnWeightKg(), winches);
         topology.requireCurrentSiteShape();
         return Optional.of(topology);
     }
@@ -69,8 +69,8 @@ public class JdbcCleaningDeviceDao implements CleaningDeviceDao {
     public void insertNew(CleaningSystemTopologyBo topology) {
         topology.requireCurrentSiteShape();
         jdbc.update("INSERT INTO cleaning_system "
-                        + "(system_id,tank_id,box_id,ring_id,ring_own_weight_kg) VALUES (?,?,?,?,?)",
-                topology.cleaningSystemId(), topology.tankId(), topology.boxId(),
+                        + "(system_id,tank_id,device_id,ring_id,ring_own_weight_kg) VALUES (?,?,?,?,?)",
+                topology.cleaningSystemId(), topology.tankId(), topology.deviceId(),
                 topology.ringId(), topology.ringOwnWeightKilograms());
         for (int winchIndex = 0; winchIndex < topology.winches().size(); winchIndex++) {
             CleaningSystemTopologyBo.Winch winch = topology.winches().get(winchIndex);
@@ -85,7 +85,7 @@ public class JdbcCleaningDeviceDao implements CleaningDeviceDao {
         }
     }
 
-    private record TopologyRow(String tankId, String systemId, String boxId,
+    private record TopologyRow(String tankId, String systemId, String deviceId,
                                String ringId, BigDecimal ringOwnWeightKg,
                                String winchId, String ropeId, String sensorId) {
     }

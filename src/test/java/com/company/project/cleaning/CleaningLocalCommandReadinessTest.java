@@ -1,13 +1,14 @@
 package com.company.project.cleaning;
 
 import com.company.project.domain.bo.*;
-import com.company.project.domain.param.cloud.*;
-import com.company.project.info.buffer.cleaning.CloudRuntimeDataCenter;
-import com.company.project.info.buffer.command.CloudCommandRegistry;
+import com.company.project.domain.param.cleaning.*;
 import com.company.project.info.buffer.plc.PlcMessageBuffer;
 import com.company.project.config.PlcAccessProperties;
-import com.company.project.presentation.plc.PlcCommandConverter;
-import com.company.project.service.impl.*;
+import com.company.project.service.command.CleaningCommandServiceImpl;
+import com.company.project.service.cleaning.CleaningServiceImpl;
+import com.company.project.service.lobby.CleaningLobbyServiceImpl;
+import com.company.project.service.safety.CleaningSafetyServiceImpl;
+
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -15,68 +16,63 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.*;
-import static com.company.project.domain.bo.CloudCommandStatusBo.State;
+import static com.company.project.domain.bo.CleaningCommandStatusBo.State;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** 不连接设备：清理旧通信后，验证未就绪、幂等与终态不会伪装成发送成功。 */
 class CleaningLocalCommandReadinessTest {
-    private static CloudCommandServiceImpl commands(CloudCommandRegistry registry) {
-        return new CloudCommandServiceImpl(registry, new PlcCommandConverter(new PlcAccessProperties()), new PlcMessageBuffer());
+    private static CleaningCommandServiceImpl commands() {
+        return TestServices.commands(new PlcAccessProperties(),new PlcMessageBuffer());
     }
-    private static CloudCommand request(String requestId, String reason) {
+    private static CleaningCommand request(String requestId, String reason) {
         Instant now = Instant.now();
-        return new CloudCommand(UUID.randomUUID().toString(), null, "box-001",
+        return new CleaningCommand(UUID.randomUUID().toString(), "plc-001",
                 "emergency_stop", Map.of("reason", reason), now, requestId, "alice",
                 now.plusSeconds(30));
     }
 
     @Test
     void unavailableChannelIsBlockedAndQueryable() {
-        var registry = new CloudCommandRegistry();
-        var commands = commands(registry);
+        var commands = commands();
         var status = commands.submit(request("req-1", "现场确认"));
         assertEquals(State.BLOCKED, status.state());
         assertEquals("PLC_DOWNLINK_NOT_READY", status.code());
-        assertNull(status.boxCommandId());
-        assertEquals(status, commands.find("box-001", "req-1").orElseThrow());
-        assertTrue(commands.find("box-other", "req-1").isEmpty());
+        assertEquals(status, commands.find("plc-001", "req-1").orElseThrow());
+        assertTrue(commands.find("plc-other", "req-1").isEmpty());
     }
 
     @Test
     void bothAllowedOperationsRemainBlockedWithoutDeviceChannel() {
-        var commands = commands(new CloudCommandRegistry());
-        var cleaning = new CloudCleaningServiceImpl(commands, new CloudRuntimeDataCenter());
-        var lobby = new CloudLobbyServiceImpl(cleaning, new CloudSafetyServiceImpl());
-        var stopContext = new CloudOperationContext("stop-1", "box-001", "alice", Set.of("device:write"));
-        var settingsContext = new CloudOperationContext("settings-1", "box-001", "alice", Set.of("device:write"));
-        var emergency = lobby.emergencyStop(new CloudEmergencyStopParam(stopContext, null, "现场急停"));
-        var settings = new CloudCleaningSettingsBo(LocalTime.of(8, 0), 3600L, null, new BigDecimal("6"));
-        var update = lobby.updateSettings(new CloudSettingsUpdateParam(settingsContext, 0, settings));
+        var commands = commands();
+        var cleaning = TestServices.cleaning(commands);
+        var lobby = TestServices.lobby(cleaning);
+        var stopContext = new CleaningOperationContext("stop-1", "plc-001", "alice", Set.of("device:write"));
+        var settingsContext = new CleaningOperationContext("settings-1", "plc-001", "alice", Set.of("device:write"));
+        var emergency = lobby.emergencyStop(new EmergencyStopParam(stopContext, "现场急停"));
+        var settings = new CleaningSettingsBo(LocalTime.of(8, 0), 3600L, new BigDecimal("6"));
+        var update = lobby.updateSettings(new SettingsUpdateParam(settingsContext, 0, settings));
         assertEquals(State.BLOCKED, emergency.state());
         assertEquals(State.BLOCKED, update.state());
         assertEquals("PLC_DOWNLINK_NOT_READY", emergency.code());
         assertEquals("PLC_DOWNLINK_NOT_READY", update.code());
-        assertEquals("NOT_SYNCHRONIZED", cleaning.settings("box-001").state());
+        assertEquals("NOT_SYNCHRONIZED", cleaning.settings("plc-001").state());
     }
 
     @Test
     void retriesKeepOriginalIdentityAndRejectChangedContent() {
-        var registry = new CloudCommandRegistry();
-        var commands = commands(registry);
+        var commands = commands();
         var original = commands.submit(request("same-request", "同一操作"));
         assertEquals(original, commands.submit(request("same-request", "同一操作")));
-        assertEquals(1, registry.entries().size());
         assertThrows(IllegalArgumentException.class,
                 () -> commands.submit(request("same-request", "不同操作")));
     }
 
     @Test
     void concurrentRetriesNeverObserveCreatedOrQueuedState() throws Exception {
-        var registry = new CloudCommandRegistry();
-        var commands = commands(registry);
+        var commands = commands();
         var pool = Executors.newFixedThreadPool(4);
         var start = new CountDownLatch(1);
-        List<Future<CloudCommandStatusBo>> futures = new ArrayList<>();
+        List<Future<CleaningCommandStatusBo>> futures = new ArrayList<>();
         try {
             for (int index = 0; index < 16; index++) {
                 futures.add(pool.submit(() -> {
@@ -89,11 +85,10 @@ class CleaningLocalCommandReadinessTest {
             for (var future : futures) {
                 var result = future.get(3, TimeUnit.SECONDS);
                 assertEquals(State.BLOCKED, result.state());
-                if (commandId == null) commandId = result.cloudCommandId();
-                assertEquals(commandId, result.cloudCommandId());
+                if (commandId == null) commandId = result.commandId();
+                assertEquals(commandId, result.commandId());
             }
-            assertEquals(1, registry.entries().size());
-        } finally {
+            } finally {
             start.countDown();
             pool.shutdownNow();
         }
@@ -101,10 +96,12 @@ class CleaningLocalCommandReadinessTest {
 
     @Test
     void terminalStateCannotBeChangedByLateStateUpdates() {
-        var registry = new CloudCommandRegistry();
-        var status = registry.registerBlocked(request("terminal-request", "测试"),
-                "PLC_DOWNLINK_NOT_READY", "未发送");
-        assertEquals(status, registry.mark("terminal-request", State.QUEUED, "LATE", "迟到更新"));
-        assertEquals(status, registry.mark("terminal-request", State.SUCCEEDED, "FALSE", "不应生效"));
+        var commands=commands();
+        var request=request("terminal-request","测试");
+        var status=commands.submit(request);
+        var late=new com.company.project.domain.bo.plc.PlcOperationBo(request.requestId(),request.commandId(),
+                request.deviceId(),request.type(),request.expiresAt(),0,null,null,List.of());
+        commands.acceptDeviceResult(new com.company.project.domain.bo.plc.PlcOperationResultBo(late,true,false,1,"LATE"));
+        assertEquals(status,commands.find(request.deviceId(),request.requestId()).orElseThrow());
     }
 }

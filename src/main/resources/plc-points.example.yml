@@ -7,7 +7,6 @@ cleaning:
     queue-capacity: 256
     devices:
       - id: ""                  # 本地通信设备编号
-        box-id: ""              # 复用数据库清洗系统的既有 boxId，非新增物理盒子
         enabled: false
         writes-enabled: false
         host: ""

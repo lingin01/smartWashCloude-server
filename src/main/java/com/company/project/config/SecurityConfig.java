@@ -1,6 +1,7 @@
 package com.company.project.config;
 
 import com.company.project.security.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -27,13 +28,16 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
-    public SecurityFilterChain cloudCleaningSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain cleaningSecurityFilterChain(HttpSecurity http) throws Exception {
         // 路径匹配不依赖 MVC 容器，兼容现有非 Web 启动上下文测试。
-        return http.securityMatcher(new AntPathRequestMatcher("/api/cloud/cleaning/**"))
+        return http.securityMatcher(new AntPathRequestMatcher("/api/cleaning/**"))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> auth
+                        // SSE异步收尾沿用已通过鉴权的请求；首次请求仍必须登录。
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
+                        .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
@@ -46,16 +50,6 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .cors(cors -> {})
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            // 【已注释：关闭登录验证，以下为原来的权限拦截规则】
-            // .authorizeHttpRequests(auth -> auth
-            //     .requestMatchers("/api/auth/**").permitAll()
-            //     .requestMatchers("/ws/**").permitAll()
-            //     .requestMatchers("/api/admin/**").hasRole("ADMIN")
-            //     .requestMatchers("/api/**").hasAnyRole("ADMIN", "OPERATOR", "VIEWER")
-            //     .anyRequest().authenticated()
-            // )
-            // 【已注释：关闭JWT过滤器】
-            // .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
         return http.build();

@@ -20,31 +20,31 @@ public class JdbcTelemetryHistoryDao implements TelemetryHistoryDao {
     }
 
     @Override
-    public boolean batchExists(String boxId, String batchId) {
+    public boolean batchExists(String deviceId, String batchId) {
         Integer count = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM cleaning_telemetry_batch WHERE box_id=? AND batch_id=?",
-                Integer.class, boxId, batchId);
+                "SELECT COUNT(*) FROM cleaning_telemetry_batch WHERE device_id=? AND batch_id=?",
+                Integer.class, deviceId, batchId);
         return count != null && count > 0;
     }
 
     @Override
     @Transactional
-    public void insertBatch(String boxId, String batchId, long firstSequence, long lastSequence,
+    public void insertBatch(String deviceId, String batchId, long firstSequence, long lastSequence,
                             List<TelemetrySegmentEntity> segments) {
         int inserted = jdbc.update("INSERT IGNORE INTO cleaning_telemetry_batch "
-                        + "(box_id,batch_id,first_sequence,last_sequence) VALUES (?,?,?,?)",
-                boxId, batchId, firstSequence, lastSequence);
+                        + "(device_id,batch_id,first_sequence,last_sequence) VALUES (?,?,?,?)",
+                deviceId, batchId, firstSequence, lastSequence);
         if (inserted == 0) return;
 
         for (TelemetrySegmentEntity segment : segments) {
-            if (!boxId.equals(segment.boxId()) || !batchId.equals(segment.batchId())) {
+            if (!deviceId.equals(segment.deviceId()) || !batchId.equals(segment.batchId())) {
                 throw new IllegalArgumentException("历史分段不属于当前批次");
             }
             jdbc.update("INSERT INTO cleaning_telemetry_segment "
-                            + "(box_id,batch_id,telemetry_sequence,session_id,round_no,direction,"
+                            + "(device_id,batch_id,telemetry_sequence,session_id,round_no,direction,"
                             + "started_at,finished_at,start_height_m,end_height_m,trigger_reason,policy_version) "
                             + "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                    boxId, batchId, segment.telemetrySequence(), segment.sessionId(),
+                    deviceId, batchId, segment.telemetrySequence(), segment.sessionId(),
                     segment.roundNo(), segment.direction(), timestamp(segment.startedAt()),
                     timestamp(segment.finishedAt()), segment.startHeightMeters(),
                     segment.endHeightMeters(), segment.triggerReason(), segment.policyVersion());
@@ -57,50 +57,50 @@ public class JdbcTelemetryHistoryDao implements TelemetryHistoryDao {
     private void insertMeasurements(TelemetrySegmentEntity segment, String metricType,
                                     List<MeasurementAggregateEntity> values) {
         for (MeasurementAggregateEntity value : values) {
-            // sampleCount=0 代表盒子无有效点位，保留通道但不伪造测量值。
+            // sampleCount=0 代表PLC无有效点位，保留通道但不伪造测量值。
             jdbc.update("INSERT INTO cleaning_segment_measurement "
-                            + "(box_id,batch_id,telemetry_sequence,metric_type,channel_no,target_id,"
+                            + "(device_id,batch_id,telemetry_sequence,metric_type,channel_no,target_id,"
                             + "minimum_value,maximum_value,average_value,latest_value,sample_count) "
                             + "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                    segment.boxId(), segment.batchId(), segment.telemetrySequence(), metricType,
+                    segment.deviceId(), segment.batchId(), segment.telemetrySequence(), metricType,
                     value.channel(), value.targetId(), value.minimum(), value.maximum(),
                     value.average(), value.latest(), value.sampleCount());
         }
     }
 
     @Override
-    public List<TelemetrySegmentEntity> findByRange(String boxId, Instant fromInclusive,
+    public List<TelemetrySegmentEntity> findByRange(String deviceId, Instant fromInclusive,
                                                     Instant toExclusive) {
-        return jdbc.query("SELECT box_id,batch_id,telemetry_sequence,session_id,round_no,direction,"
+        return jdbc.query("SELECT device_id,batch_id,telemetry_sequence,session_id,round_no,direction,"
                         + "started_at,finished_at,start_height_m,end_height_m,trigger_reason,policy_version "
-                        + "FROM cleaning_telemetry_segment WHERE box_id=? AND started_at>=? "
+                        + "FROM cleaning_telemetry_segment WHERE device_id=? AND started_at>=? "
                         + "AND started_at<? ORDER BY started_at,telemetry_sequence LIMIT 5000",
                 (row, ignored) -> {
                     String batchId = row.getString("batch_id");
                     long sequence = row.getLong("telemetry_sequence");
-                    return new TelemetrySegmentEntity(row.getString("box_id"), batchId, sequence,
+                    return new TelemetrySegmentEntity(row.getString("device_id"), batchId, sequence,
                             row.getString("session_id"), row.getInt("round_no"),
                             row.getString("direction"), instant(row.getTimestamp("started_at")),
                             instant(row.getTimestamp("finished_at")),
                             row.getBigDecimal("start_height_m"), row.getBigDecimal("end_height_m"),
                             row.getString("trigger_reason"), row.getString("policy_version"),
-                            findMeasurements(boxId, batchId, sequence, "ROPE_TENSION_KG"),
-                            findMeasurements(boxId, batchId, sequence, "WINCH_SPEED_M_PER_MIN"),
-                            findMeasurements(boxId, batchId, sequence, "WINCH_TORQUE_FORCE_KG"));
-                }, boxId, timestamp(fromInclusive), timestamp(toExclusive));
+                            findMeasurements(deviceId, batchId, sequence, "ROPE_TENSION_KG"),
+                            findMeasurements(deviceId, batchId, sequence, "WINCH_SPEED_M_PER_MIN"),
+                            findMeasurements(deviceId, batchId, sequence, "WINCH_TORQUE_FORCE_KG"));
+                }, deviceId, timestamp(fromInclusive), timestamp(toExclusive));
     }
 
-    private List<MeasurementAggregateEntity> findMeasurements(String boxId, String batchId,
+    private List<MeasurementAggregateEntity> findMeasurements(String deviceId, String batchId,
                                                                 long sequence, String metricType) {
         return jdbc.query("SELECT channel_no,target_id,minimum_value,maximum_value,average_value,"
                         + "latest_value,sample_count FROM cleaning_segment_measurement "
-                        + "WHERE box_id=? AND batch_id=? AND telemetry_sequence=? AND metric_type=? "
+                        + "WHERE device_id=? AND batch_id=? AND telemetry_sequence=? AND metric_type=? "
                         + "ORDER BY channel_no",
                 (row, ignored) -> new MeasurementAggregateEntity(row.getInt("channel_no"),
                         row.getString("target_id"), row.getBigDecimal("minimum_value"),
                         row.getBigDecimal("maximum_value"), row.getBigDecimal("average_value"),
                         row.getBigDecimal("latest_value"), row.getLong("sample_count")),
-                boxId, batchId, sequence, metricType);
+                deviceId, batchId, sequence, metricType);
     }
 
     private static Timestamp timestamp(Instant value) {

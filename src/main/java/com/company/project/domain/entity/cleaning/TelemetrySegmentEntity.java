@@ -4,8 +4,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
-/** 盒子上报的降采样段，三元键 boxId+batchId+telemetrySequence 防重复。 */
-public record TelemetrySegmentEntity(String boxId, String batchId, long telemetrySequence,
+/** 后端整理的历史分段，三元键 deviceId+batchId+telemetrySequence 防重复。 */
+public record TelemetrySegmentEntity(String deviceId, String batchId, long telemetrySequence,
                                      String sessionId, int roundNo, String direction,
                                      Instant startedAt, Instant finishedAt,
                                      BigDecimal startHeightMeters, BigDecimal endHeightMeters,

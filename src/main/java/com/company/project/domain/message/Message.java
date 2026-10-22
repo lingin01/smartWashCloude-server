@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
-/** 内部不可变信封，不包含 Topic 或传输库对象；载荷类型由各有界通道限定。 */
+/** 内部不可变消息；载荷类型由各有界通道限定。 */
 public record Message<T>(String messageId, String correlationId, String deviceId, Type type,
                          int priority, Instant createdAt, Instant expiresAt, T payload) {
     public enum Type { PLC_OPERATION, PLC_WRITE_RESULT, DEVICE_SNAPSHOT }

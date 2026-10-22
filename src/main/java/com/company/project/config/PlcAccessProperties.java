@@ -16,18 +16,18 @@ public class PlcAccessProperties {
     private int queueCapacity = 256;
     private List<Device> devices = new ArrayList<>();
 
-    public Optional<Device> activeDeviceForBox(String boxId) {
+    public Optional<Device> activeDevice(String deviceId) {
         if (!enabled) return Optional.empty();
-        return devices.stream().filter(d -> d.enabled && Objects.equals(d.boxId, boxId)).findFirst();
+        return devices.stream().filter(d -> d.enabled && Objects.equals(d.id, deviceId)).findFirst();
     }
 
     public void validate() {
         if (workerIntervalMs < 10 || queueCapacity < 1 || queueCapacity > 4096 || devices.size() > 64)
             throw new IllegalArgumentException("PLC 工作周期、队列容量或设备数量无效");
-        Set<String> ids = new HashSet<>(), boxes = new HashSet<>();
+        Set<String> ids = new HashSet<>();
         for (Device d : devices) {
             if (!d.enabled) continue;
-            if (blank(d.id) || blank(d.boxId) || !ids.add(d.id) || !boxes.add(d.boxId)
+            if (blank(d.id) || !ids.add(d.id)
                     || blank(d.host) || d.port < 1 || d.port > 65535 || d.unitId < 0 || d.unitId > 255
                     || d.pollIntervalMs < 50 || d.timeoutMs < 50 || d.timeoutMs > 10000)
                 throw new IllegalArgumentException("PLC 连接或归属配置无效");
@@ -102,7 +102,6 @@ public class PlcAccessProperties {
     @Data
     public static class Device {
         private String id;
-        private String boxId;
         private boolean enabled;
         private boolean writesEnabled;
         private String host;

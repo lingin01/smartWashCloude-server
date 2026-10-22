@@ -1,35 +1,44 @@
 package com.company.project.controller;
-
+import com.company.project.dto.cleaning.*;
 import com.company.project.domain.Result;
-import com.company.project.dto.EmergencyStopDTO;
-import com.company.project.dto.StartCleaningDTO;
-import com.company.project.dto.SystemResetDTO;
-import com.company.project.vo.CleaningResultVO;
-import org.springframework.http.HttpStatus;
+import com.company.project.presentation.web.CleaningWebPresentation;
+import com.company.project.vo.cleaning.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * 旧操作入口仅保留迁移或不支持说明，不能返回虚假的设备执行成功。
- * 旧页面模拟查询已移除；真实查询使用 /api/cloud/cleaning/boxes/{boxId}。
- */
+/** 用户侧网络接入：只接收 HTTP 对象并交表示层，不直接读缓冲、DAO 或发送设备报文。 */
 @RestController
-@RequestMapping("/api/cleaning")
+@RequestMapping("/api/cleaning/devices/{deviceId}")
 public class CleaningController {
-    @PostMapping("/start")
-    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-    public Result<CleaningResultVO> startCleaning(@RequestBody StartCleaningDTO dto) {
-        return new Result<>(405, "自动清洗由现场 PLC 启动，云端不提供远程启动", null);
+    private final CleaningWebPresentation presentation;
+    private final com.company.project.presentation.web.RealtimePushPresentation push;
+    public CleaningController(CleaningWebPresentation presentation, com.company.project.presentation.web.RealtimePushPresentation push) { this.presentation = presentation; this.push=push; }
+    @PostMapping("/emergency-stop")
+    public ResponseEntity<Result<CleaningCommandVo>> emergencyStop(@PathVariable String deviceId,
+            @RequestBody EmergencyStopDto request, Authentication auth) {
+        return presentation.emergencyStop(deviceId, request, auth);
     }
-
-    @PostMapping("/stop")
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public Result<CleaningResultVO> emergencyStop(@RequestBody EmergencyStopDTO dto) {
-        return new Result<>(409, "请使用 /api/cloud/cleaning/boxes/{boxId}/emergency-stop 并提供 requestId", null);
+    @PutMapping("/settings")
+    public ResponseEntity<Result<CleaningCommandVo>> updateSettings(@PathVariable String deviceId,
+            @RequestBody SettingsUpdateDto request, Authentication auth) {
+        return presentation.updateSettings(deviceId, request, auth);
     }
-
-    @PostMapping("/reset")
-    @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-    public Result<CleaningResultVO> systemReset(@RequestBody SystemResetDTO dto) {
-        return new Result<>(405, "当前交互范围不提供远程复位或解除急停", null);
+    @GetMapping("/realtime") public Result<CleaningRealtimeVo> realtime(@PathVariable String deviceId, Authentication auth) {
+        return presentation.realtime(deviceId, auth);
+    }
+    @GetMapping("/settings") public Result<CleaningSettingsVo> settings(@PathVariable String deviceId, Authentication auth) {
+        return presentation.settings(deviceId, auth);
+    }
+    @GetMapping("/commands/{requestId}") public Result<CleaningCommandVo> operation(@PathVariable String deviceId,
+            @PathVariable String requestId, Authentication auth) {
+        return presentation.operation(deviceId, requestId, auth);
+    }
+    @GetMapping("/statistics") public Result<CleaningStatisticsVo> statistics(@PathVariable String deviceId,Authentication auth) {
+        return presentation.statistics(deviceId,auth);
+    }
+    @GetMapping(value="/realtime/stream",produces=org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter stream(@PathVariable String deviceId,Authentication auth) {
+        return push.subscribe(deviceId,auth);
     }
 }

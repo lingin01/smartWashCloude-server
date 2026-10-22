@@ -2,7 +2,7 @@ package com.company.project.cleaning;
 
 import com.company.project.config.PlcAccessProperties.*;
 import com.company.project.domain.bo.plc.PlcOperationBo.Write;
-import com.company.project.network_access_layer.plc.*;
+import com.company.project.infrastructure.plc.*;
 import org.junit.jupiter.api.Test;
 import java.io.*;
 import java.net.*;
