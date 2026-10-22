@@ -1,5 +1,7 @@
 # 数据库基线与迁移
 
+页面字段对应的下一版目标表设计见[页面驱动的数据库设计](page-driven-database-design.md)。该文件仅为方案，没有变更下面的7表基线，也没有执行迁移。
+
 唯一新库建表基线是 [schema.sql](../../src/main/resources/schema.sql)，在预先选定的目标库执行。包含t_user、三张PLC拓扑表、三张历史表；不包含凭据表、旧通用设备/告警表或尚无实现的业务表。IF NOT EXISTS不是升级机制。
 
 旧库迁移使用 [migrate_legacy.sql](migrate_legacy.sql)。操作前备份并暂停应用写入，再在实际目标库手动执行。该脚本不是启动脚本，DDL不能依赖事务回滚。

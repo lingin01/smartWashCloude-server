@@ -41,6 +41,8 @@ mvn spring-boot:run
 
 依据PLC点位表整理的点位取舍、系统/单机五态、每次清洗与历史保存建议见[点位与历史方案](docs/plc-data-and-history-plan.md)。该文档只讨论方案，不表示功能已实现。
 
+根据前端页面字段倒推的档案、上行记录、采样、异常及预计算表结构见[页面驱动的数据库设计](docs/database/page-driven-database-design.md)，同样仅为方案，当前7表基线不变。
+
 ## 数据流与边界
 
 ```text
