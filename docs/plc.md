@@ -1,5 +1,7 @@
 # PLC直连接入说明
 
+本轮D201、D203～D206、M50与历史业务的设计见[新版统一方案](unified-plc-business-and-data-plan.md)。下面“当前代码”描述既有实现，不表示已适配新点位。
+
 设备唯一标识是`cleaning.plc.devices[].id`，通过采集、消息、业务、HTTP和数据库统一使用。IP、端口、unitId是连接参数。用户操作经过登录账号和权限检查。
 
 点位取舍、五态和历史保存的业务方案见[点位与历史方案](plc-data-and-history-plan.md)。本轮只整理方案，没有将方案中的历史数据模型或流程写入程序。

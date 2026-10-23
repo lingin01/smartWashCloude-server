@@ -1,5 +1,7 @@
 # 数据库基线与迁移
 
+新版点位及完整业务口径见[统一方案](../unified-plc-business-and-data-plan.md)，字段/索引继续由下面的页面驱动设计补充；当前建表基线仍未变更。
+
 页面字段对应的下一版目标表设计见[页面驱动的数据库设计](page-driven-database-design.md)。该文件仅为方案，没有变更下面的7表基线，也没有执行迁移。
 
 唯一新库建表基线是 [schema.sql](../../src/main/resources/schema.sql)，在预先选定的目标库执行。包含t_user、三张PLC拓扑表、三张历史表；不包含凭据表、旧通用设备/告警表或尚无实现的业务表。IF NOT EXISTS不是升级机制。
