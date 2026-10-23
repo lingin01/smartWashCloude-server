@@ -19,6 +19,8 @@ mvn spring-boot:run
 
 ## 当前API
 
+请求参数、返回字段、SSE、命令结果及后续历史/曲线/统计/导出契约见[对外接口说明](docs/external-api-contract.md)。文档区分现有代码行为与待实现接口，不将接口设计当作已开放能力。
+
 | 方法 | 路径 | 用途 |
 |---|---|---|
 | GET | `/api/cleaning/devices/{deviceId}/realtime` | 最新采集快照 |
