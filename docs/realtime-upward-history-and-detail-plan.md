@@ -1,10 +1,12 @@
 # 首页推送、查询快照、上行历史与页面统计方案
 
-日期：2026-10-24。依据本次《前后端职责与页面接口修订说明》更新。本文为目标设计，没有修改前端、后端实现、数据库或PLC配置。
+日期：2026-10-25。依据《前后端职责与页面接口修订说明》及最新《当前项目总结与详情拉力对比图数据处理说明》更新。本文为目标设计，没有修改前端、后端实现、数据库或PLC配置；详情图的取点、统计及字段取舍集中见[详情拉力对比处理说明](detail-force-comparison-processing.md)。
 
 页面职责、公开编号、状态名称和响应规则以[本轮前后端对齐说明](frontend-backend-contract-alignment.md)及[对外接口说明](external-api-contract.md)为准；PLC事实、运动用途和保存边界沿用[统一方案](unified-plc-business-and-data-plan.md)。本文解释这些规则怎样落到页面、查询与历史。
 
 一套系统、一台PLC、四台动力设备、八路索拉力，后端Modbus TCP直连。上行/下行指机械提升/下降。生产上行与回退/检修上行留核心原始；正常下行只实时展示，下行异常留事件点。采集数据不做时间校验，未知点位语义、阈值、机械限位、处理尝试不编造。
+
+最新附件报告前端已清理字段、取消详情定时刷新，但总拉力、右侧统计和部分同高度取点仍在浏览器计算；生产首页尚未接入每秒后端推送，历史CSV仍由浏览器生成。这些是附件报告的前端现状，本仓库未独立验证其源码或255项测试，也不能把DEV效果不变当成后台迁移已完成。附件混合上/下行与回退的模拟统计仅作演示回归参考，不改变本项目生产UP统计及下行仅存事件的边界。
 
 ## 1. 前端显示结果，后端提供业务结论
 
@@ -47,7 +49,7 @@
 
 内部继续用system_id、PLC deviceId、winchId、ropeId、sensorId及其明确绑定。清洗服务解析公开编号到内部关系，不把改页面字段当成重命名数据库主键或重建盒子链路。页面不再使用系统含义的tankCode，也不默认回退TANK-03。
 
-recordCode贯穿列表、详情、事件与导出。sampleFrameId定位实际采集帧，后端pointKey定位可对照的本机来源读数；展示序号不是记录主键或清洗次数。
+recordCode贯穿列表、详情、事件与导出。sampleFrameId定位实际采集帧，后端sampleKey定位同分组可对照的本机来源读数；此次统一替换未实施目标中的pointKey，不维护两套联动键。展示序号不是记录主键或清洗次数。
 
 ### 3.2 现阶段RUN是生产上行单程
 
@@ -114,7 +116,9 @@ M8是正常回原位的约1秒脉冲，原位可在上方；M9是下降到位；
 
 WEEK、MONTH、WHOLE为旧通用分组类型，本期不另开这几类查询。去年同期由后端按同一日历位置和已纳入数据的明确截止构造，返回实际范围与可比性，不把去年全年冒充本月同期。具体比较规则见对齐说明与接口文档。
 
-返回kind、units、series、heightMin/heightMax、heightLimits、dataRange、asOf、updatedAt。每个unit带id/name、实际起止/dataThrough、empty和原因，运行组另有runState及后端结果说明；空组保留元数据并标empty=true，不生成0线或假去年数据。
+返回kind、defaultUnitId、units、series、heightMin/heightMax、heightLimits、dataRange、asOf、updatedAt。每个unit带id/name、startTime/endTimeExclusive、dataThrough、empty和原因；运行组保留IN_PROGRESS/ENDED/UNCONFIRMED及独立runResult，不把终止都压成COMPLETED。空组标empty=true，不生成0线或假去年数据。
+
+左图“全部次数”表示叠画已加载的多个unit；右上表只读当前unit/sampleKey的历史读数，右下表只读该unit的完整来源统计，不能改成全日所有运行的统计。顶部详情快照不随历史光标改变。后端defaultUnitId必须指向首批已经返回的unit：COUNT优先有明确依据的进行中记录，其次最近确认完成的记录，再选实际存在的其他组；PERIOD优先当前非空周期再其他非空组，全部为空则null。后续游标保持此初始默认值，不覆盖用户选择。首次未取点时上表为空，下表可读默认组统计；用户命中实际点后再切换检视对象。分批加载继续遵守响应预算，不因附件演示20次就一次返回全部历史点。
 
 ### 6.2 四个来源由后端提供
 
@@ -125,11 +129,13 @@ WEEK、MONTH、WHOLE为旧通用分组类型，本期不另开这几类查询。
 | ROPE_TOTAL | 钢绳总拉力 | 后端已明确配对的两索集合，内部可仍用PAIRED_SUM标识 |
 | SERVO | 伺服电机拉力 | 独立反馈按已确认公式换算 |
 
-各series返回unitId、来源编号、实际name、unit=t、含points的segments和statistics。statistics包含averageTension、maxTension、minTension、validSampleCount及明确统计口径；无有效值时力值null，已知有效样本数为0。未计算不能伪装为0。
+各series返回unitId、来源编号、实际name、unit=t、含points的segments、statistics和rawStatistics。两个统计对象均带metricBasis及实际范围，不能让“最大/最小”在原始与平均口径之间隐式切换；无有效值时力值null，已知有效样本数为0，未计算不能伪装为0。
 
-后端按稳定采集帧、已明确的本机身份/方向/采集一致性建立pointKey与配对读数。仅“时间接近”或“高度相同”不构成匹配，不猜时间容差，不因时间早晚拒收采样。不具备合计条件时ROPE_TOTAL=null及对应质量/原因；前端不任取附近点或补0相加。
+后端按稳定采集帧、已明确的本机身份/方向/采集一致性建立sampleKey与配对读数。仅“时间接近”或“高度相同”不构成匹配，不猜时间容差，不因时间早晚拒收采样。不具备合计条件时ROPE_TOTAL=null及对应质量/原因；前端不任取附近点或补0相加。
 
-悬停用后端给定pointKey直接定位已返回的来源读数；精确原始点接口也提交pointKey，由后端解析对应真实sampleFrameId，不能将周期平均桶当作现场帧。展示同一高度不同经过的点，仍以真实记录、连续段和采集顺序区分。
+悬停用unitId/sampleKey直接定位已返回的来源读数；精确原始点接口也提交sampleKey，由后端解析对应真实sampleFrameId，不能将周期平均桶当作现场帧。重复经过同一高度仍使用不同键，没有同键值就显示缺失。前端建立键索引属于展示，按高度/最近时间重新配对属于应移走的业务计算。
+
+总拉力速度来自该帧本机已确认适用的运动速度，不能相加两绳速度，也不默认抄钢绳1；来源不足则null。周期总力速度仅在实际配对集合上用速度自己的sum/count计算。计算使用未舍入原值，前端最后做t/kg和小数格式化，不相加已显示字符串；坐标边界不作为告警阈值或机械限位。
 
 ### 6.3 原始线、平均线和数量
 
@@ -137,9 +143,11 @@ WEEK、MONTH、WHOLE为旧通用分组类型，本期不另开这几类查询。
 
 高度平均按实际本机高度、来源和已确认分箱规则构建；保存sum/count/min/max，平均=sum/count。跨日/月合并和与数量，速度用自己的有效数量；不平均平均值、不把两个独立来源的均值相加当总力平均。缺高度但有效的生产拉力仍进入测量摘要/极值，不能进入高度曲线。
 
-每个高度桶sampleCount是该来源有效采样数；unit.sourceRecordCounts是各来源参与运行去重数；unit.recordCount是四来源并集的去重运行数。前端切换图例不重算这三种数量，右侧直接展示后端对应来源统计及明确口径。
+原始点sampleCount有效为1、无效为0，平均点为该来源真实有效采样数；缺失数量不能按1补权重。GOOD/PARTIAL还需具备该数值的有效依据，有效0正常参与，INVALID/OFFLINE不生成有效值。unit.sourceIncludedRunCounts是各来源参与运行去重数，unit.includedRunCount是四来源并集去重数，不将运行数当平均权重。
 
-最高/最低原始拉力、平均曲线最高/最低平均各自命名。平均点的time不得伪装现场采样时刻，使用实际周期/统计截止说明；未知限位显式null，不用0～30m绘图区填限位。
+COUNT的series.statistics使用metricBasis=RAW_CURVE_SAMPLES，统计完整生产UP曲线中有有效高度的原始点；PERIOD使用HEIGHT_BUCKET_MEANS，averageTension按完整基础高度桶sum/count加权，maxTension/minTension取这些桶均值的最高/最低。series.rawStatistics另用RAW_VALID_SAMPLES返回所有有效生产UP原始值的均值及瞬时极值，包含缺高度测量。二者不从当前响应缩减点或前端已加载子集重算，显示合桶也不改变基础桶口径的右侧统计。
+
+unit.ropeExtrema只合并该组两条单绳的同口径集合：COUNT取完整可画原始单绳极值，PERIOD取完整基础桶单绳均值极值，均注明metricBasis；不含ROPE_TOTAL和SERVO，图例隐藏某绳不改变它。总拉力极值来自先逐点配对相加后的序列，不能相加两绳各自最大值。平均点time为null，范围/截至另列；未知限位null，不用0～30m绘图区填限位。
 
 ## 7. 上行列表、单次详情与全系统日期
 

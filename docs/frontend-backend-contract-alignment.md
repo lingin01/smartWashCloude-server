@@ -92,3 +92,23 @@ availableDates是本系统全历史可查询运行日期，独立于当前页和
 | /users页面只需只读列表 | 新读取接口实施权限、筛选、角色名称和分页；旧管理员CRUD不作为当前页面契约 |
 
 实际已实现接口仍在[当前接口参考](current-api-reference.md)。未实现的页面路由、新字段和新状态映射都不能当作联调已通过；此次未改Java、配置或数据库。
+
+## 5. 2026-10-25 根据详情图新报告补充
+
+新增依据为[2026-10-24详情图报告原文](reference/detail-force-comparison-report-20261024.md)，完整处理规则见[详情拉力对比图说明](detail-force-comparison-processing.md)。附件报告前端字段清理已经完成，但总力、右侧统计与部分取点仍在浏览器计算；首页生产未接每秒推送，CSV仍在浏览器生成。这些是用户提供的前端现状，本仓库未独立运行其255项测试，不能当成后端实现进度。
+
+| 本次调整 | 统一口径 |
+|---|---|
+| 三个区域 | 左图可叠加多组；右上是当前unit/sampleKey，右下是当前unit完整统计，顶部详情快照独立 |
+| 联动键 | 目标sampleKey替代未实施的pointKey；sampleFrameId仍是实际帧，平均桶没有实际帧 |
+| 默认组 | defaultUnitId由后端提供且属于首批实际返回组；后续加载不覆盖用户选择 |
+| 运行数量 | includedRunCount/sourceIncludedRunCounts替代recordCount/sourceRecordCounts；points.sampleCount仅为有效样本数 |
+| 曲线统计 | COUNT statistics为完整可画生产UP原始集合；PERIOD为固定基础高度桶的加权均值与最高/最低平均，明确metricBasis |
+| 原始统计 | rawStatistics单列原始瞬时极值及均值，包含缺高度有效测量；不与平均桶极值混用 |
+| 两索整体极值 | unit.ropeExtrema只覆盖两单绳集合，不能当总拉力极值；总力先逐点配对求和再统计 |
+| 速度与精度 | 总力速度使用已确认适用本机速度，不求和或盲抄单绳；原精度计算，最终才格式化 |
+| 范围不变 | segments.points、startTime/endTimeExclusive、IN_PROGRESS/ENDED/UNCONFIRMED及独立runResult继续保留，避免丢失分段、终止与未知事实 |
+
+PERIOD的statistics.maxTension/minTension按新报告明确改为最高/最低平均点，原始峰值移入rawStatistics，不保留含义重复的maxAverageTension/minAverageTension。统计基于完整基础集合，不随降采样、显示合桶、分页或图例改变。前端类型需同步适配，不能只更名而继续计算旧结果。
+
+附件模拟包含上下行/回退的平均和固定20次、51/601点，是演示回归数据；正式生产统计仍只取PRODUCTION_UP，其他UP原始保留，正常DOWN仅实时与异常事件。后台导出任务、告警服务端筛选和参数saved/applied方案继续保留，不退回附件描述的前端当前临时实现。本次仍只改文档。

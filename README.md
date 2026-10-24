@@ -13,6 +13,8 @@ Java 17、Spring Boot 3.2.5、MySQL 8 的单体后端，服务端直接通过 Mo
 
 页面细节和文件处理按需看[页面与历史方案](docs/realtime-upward-history-and-detail-plan.md)、[导出方案](docs/data-export-plan.md)。当前已经实现什么，单独看[现有接口参考](docs/current-api-reference.md)和[代码架构](docs/architecture.md)。用户提供的[修订原文](docs/reference/frontend-backend-revision-20261024.md)保留作依据，不将其中示例和建议当成已接通PLC的事实。
 
+针对最新上传的详情图说明，先看[详情拉力对比图数据处理](docs/detail-force-comparison-processing.md)：区分左图、采样表与统计表，说明sampleKey、默认分组、四来源、原始极值与最高/最低平均，以及数据库和接口如何配合。附件报告的前端清理/模拟测试与真实后端迁移分别标注；正式历史仍按生产上行统计，下行只留异常事件。
+
 ## 数据库与环境
 
 在自己的开发目标库执行 [schema.sql](src/main/resources/schema.sql)，只有账号、PLC拓扑、历史批次/记录/测量共7张表；脚本不创建或切换数据库，不创建默认账号。

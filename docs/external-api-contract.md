@@ -1,6 +1,6 @@
 # 页面对外接口契约：输入、返回与职责
 
-修订日期：2026-10-24。依据本轮[前后端职责修订原文](reference/frontend-backend-revision-20261024.md)及[对齐决定](frontend-backend-contract-alignment.md)。本文定义新的页面目标接口，不表示路由、字段、每秒完整推送或历史功能已经实现。
+修订日期：2026-10-25。依据[前后端职责修订原文](reference/frontend-backend-revision-20261024.md)、[详情图新报告](reference/detail-force-comparison-report-20261024.md)及[对齐决定](frontend-backend-contract-alignment.md)。本文定义新的页面目标接口，不表示路由、字段、每秒完整推送或历史功能已经实现；本次图表计算细则见[详情拉力对比处理说明](detail-force-comparison-processing.md)。
 
 **本页只描述目标。** 当前Java实际接口、kg/STANDBY/NON_NULL返回、命令和鉴权限制已移到[当前接口参考](current-api-reference.md)。以前拟议的`/api/cleaning/devices/{deviceId}/history/...`不再作为页面正式目标，不新增两套未来接口供前端猜选；当前七个设备接口尚未因文档修订而迁移。
 
@@ -28,7 +28,7 @@ API基地址为`/api`，下文`C`表示`/api/command-center`。请求统一使�
 | 查询区间 | 时刻和日期均开始包含、结束排除；格式/查询起止检查不是采样时间校验 |
 | 业务输出 | 后端给实际名称、状态/结果中文、质量、原因、配对总力和统计；前端不重新推导 |
 | 五态 | 页面IDLE/RUNNING/MAINTENANCE/FAULT/OFFLINE，内部STANDBY可映射IDLE；未知为null＋statusValid=false |
-| 类型 | 编号、pointKey、序号、版本为string；数量integer；测量number或null；数组无项[] |
+| 类型 | 编号、sampleKey、序号、版本为string；已知数量integer，尚未构建的数量null；测量number或null；数组无项[] |
 
 显式null是新页面DTO的实施要求，当前全局NON_NULL尚未改变。下文返回对象均放在Result.data内，文件下载与SSE另有协议。
 
@@ -158,23 +158,39 @@ COUNT返回kind=BATCH，一次生产上行一组；其余为kind=PERIOD。旧通
 | MONTH | 本月、上月、去年同期 |
 | YEAR | 本年、去年同期 |
 
-顶层返回：`systemCode、winchCode、kind、comparisonView、units、series、heightMin、heightMax、heightLimits、dataRange、asOf、updatedAt、complete、nextCursor、totalUnits、loadedUnits、aggregation、notices、pointReadings`。未知高度/限位、nextCursor显式null；无实际高度不造0～30m。无数据的预期周期仍有empty=true的unit与原因，不画0线。
+顶层返回：`systemCode、winchCode、kind、comparisonView、defaultUnitId、units、series、heightMin、heightMax、heightLimits、dataRange、asOf、updatedAt、complete、nextCursor、totalUnits、loadedUnits、aggregation、notices、pointReadings`。未知高度/限位、nextCursor显式null；无实际高度不造0～30m。无数据的预期周期仍有empty=true的unit与原因，不画0线。
+
+defaultUnitId为string或null，由后端确定且必须属于首批实际返回的units。COUNT优先有明确依据的进行中、其次最近确认完成、再其他实际记录；PERIOD优先当前非空周期再其他非空组，全部为空返回null。后续游标保持此初始默认值，不覆盖用户选择。左图“全部次数”叠加已加载分组，右上只看当前unit/sampleKey，右下只看当前unit完整统计；首次没有命中点时上表为空，默认组只提供下表统计。顶部详情快照独立。
 
 | 对象 | 内容 |
 |---|---|
-| units[] | id、name、periodType或null、recordCode或null、startTime、endTimeExclusive、dataFrom、dataThrough、empty、emptyReason、runState、runResultText、recordCount、sourceRecordCounts、statisticsState |
-| series[] | unitId、winchCode、sourceRole、sourceCode或null、name、unit=t、segments、statistics |
+| units[] | id、name、periodType或null、recordCode或null、startTime、endTimeExclusive、dataFrom、dataThrough、empty、emptyReason、runState、runResult、runResultText、includedRunCount、sourceIncludedRunCounts、ropeExtrema、statisticsState |
+| series[] | unitId、winchCode、sourceRole、sourceCode或null、name、unit=t、empty、emptyReason、segments、statistics、rawStatistics |
 | sourceRole | SENSOR1/SENSOR2/ROPE_TOTAL/SERVO，四来源由后端准备，图例仅选择已返数据 |
 | segments[] | segmentCode、motionRole、gapBefore、points；原始按采集顺序，平均按高度桶，不跨缺口连线 |
-| statistics | averageTension、maxTension、minTension、validSampleCount、maxAverageTension、minAverageTension、scope、granularity、message；未知值null |
+| statistics / rawStatistics | averageTension、maxTension、minTension、validSampleCount、bucketCount、metricBasis、scope、heightRuleVersion、message；未知或不适用字段null |
+| ropeExtrema | maxTension、minTension、metricBasis、unit=t、message；仅两单绳完整曲线集合，不含总力/伺服 |
 
-原始点：`{pointKey,sampleFrameId,time,height,value,quality,missingReason,speed,direction,motionRole,sampleCount:null}`。平均点：`{pointKey,sampleFrameId:null,time:null,height,heightFrom,heightTo,value,quality,sampleCount,speed,speedSampleCount}`；value为后端sum/count得到的t值，不是原始帧。缺失数值显式null。
+runState为IN_PROGRESS/ENDED/UNCONFIRMED或null，runResult单独表达完成、终止和未确认；不将ENDED一律叫COMPLETED。非空分组仍提供四来源的结构，某来源没有数据时segments=[]、empty=true及原因，不让前端生成合计曲线。
 
-pointReadings为`[{pointKey,time,height,readings:[{sourceRole,value,unit,quality,speed,missingReason}]}]`，由后端准备同unit可对照数据，计入总预算。不能配对的来源值null，不取另一次同高度点凑数；前端只按key读取。平均桶标明统计区间，不冒充同时现场采样。
+原始点：`{sampleKey,sampleFrameId,time,height,value,quality,missingReason,speed,direction,motionRole,sampleCount}`。原始有效sampleCount=1，无效为0且value=null。平均点：`{sampleKey,sampleFrameId:null,time:null,height,heightFrom,heightTo,value,quality,missingReason,sampleCount,speed,speedSampleCount}`；数量为该来源真实有效样本数，value为后端sum/count得到的t值，不是原始帧。样本数缺失不能按1兜底；未构建的数量null、已确认空集合为0。有效0保留，GOOD/PARTIAL仍需对应通道数值有效依据，INVALID/OFFLINE不计入有效值。
 
-statistics.scope区分RECORD_PRODUCTION_UP/PERIOD_VALID_SAMPLES/HEIGHT_BUCKET_MEANS；原始极值与平均曲线最高/最低平均分别返回，不随前端名称改变。有效报警峰值仍保留；无高度但拉力有效参与原始摘要，不进高度曲线。ROPE_TOTAL只统计确实配对集合，不能相加不同样本集合的独立均值。
+pointReadings为`[{unitId,winchCode,sampleKey,time,height,readings:[{sourceRole,value,unit,quality,speed,missingReason}]}]`，由后端准备同unit可对照数据，计入总预算。sampleKey取代上版未实施的pointKey，只维护一个页面关联键；真实帧仍为sampleFrameId。原始键来自已确认帧、本机和分段，平均键来自周期、本机、规则/计算版本及基础桶。不能配对的来源值null，不取另一次同高度/最近时间点凑数；右表与图表标记都只按同键读取。共享平均桶键不表示不同来源具有相同样本集合。
 
-recordCount是该分组四来源并集去重记录数，sourceRecordCounts是各来源去重数，points.sampleCount是桶有效样本数；前端不重算。图例显隐不改变分组统计。生产平均只取PRODUCTION_UP，恢复/检修原始另标用途/段，不加生产次数；正常DOWN没有完整历史曲线。aggregation回显NONE/MIN_MAX/HEIGHT_BUCKET及实际粒度；complete只表示范围加载完整，不表示无缩减。
+| 统计对象 | metricBasis与固定口径 |
+|---|---|
+| COUNT statistics | RAW_CURVE_SAMPLES：完整PRODUCTION_UP可画曲线原始集合的均值和瞬时极值；缺高度值不在此集合 |
+| PERIOD statistics | HEIGHT_BUCKET_MEANS：完整基础高度桶sum合计/count合计得到均值，maxTension/minTension为非空基础桶均值的最高/最低；validSampleCount为桶有效样本数之和 |
+| rawStatistics | RAW_VALID_SAMPLES：完整有效生产原始测量均值/瞬时极值，包含缺高度测量；不从平均曲线反推 |
+| unit.ropeExtrema | COUNT为两单绳原始曲线集合，PERIOD为两单绳基础桶均值集合；metricBasis跟随上述对应statistics |
+
+scope为`{unitId,winchCode,motionRole:"PRODUCTION_UP",startTime,endTimeExclusive}`，实际未知边界null；rawStatistics与曲线对象保持同一运行/周期。bucketCount仅PERIOD基础桶统计适用，heightRuleVersion对应基础桶规则，其余null。统计准备状态采用unit.statisticsState=READY/UPDATING/NOT_BUILT并给说明，未算不伪装为0。本轮明确修订PERIOD maxTension/minTension语义，移除上版maxAverageTension/minAverageTension，原始峰值单独保留在rawStatistics。
+
+ROPE_TOTAL先按实际共同有效配对样本求和再聚合；总力极值不是两个单绳极值之和。总力速度来自该帧已确认适用的本机速度，未知null，不相加速度或默认抄SENSOR1；平均速度在配对集合内使用自己的有效和/数量。有效报警峰值仍保留。后端按原精度计算、页面边界kg转t，前端最后格式化，不相加已经舍入的显示值。
+
+includedRunCount是该分组四来源并集去重运行数，sourceIncludedRunCounts为`{SENSOR1,SENSOR2,ROPE_TOTAL,SERVO}`各来源去重数，替代recordCount/sourceRecordCounts；points.sampleCount是有效样本数，不用运行数作权重。未计算的数量null；已知空集合为0。
+
+statistics和rawStatistics都基于完整逻辑集合，不从本批曲线、显示合桶或缩减点重算；分页、图例、缩放不改变右下统计。生产平均只取PRODUCTION_UP，恢复/检修原始另标用途/段，不加生产次数；正常DOWN没有完整历史曲线。aggregation回显NONE/MIN_MAX/HEIGHT_BUCKET及实际显示粒度，PERIOD右侧固定使用heightRuleVersion基础桶；complete只表示范围加载完整，不表示无缩减。附件含上下行/回退的模拟均值不作为正式生产统计的等值承诺。
 
 ## 4. 历史列表与单次详情
 
@@ -222,9 +238,9 @@ todayCompletedCount及周期结果按开始日记录组；跨日结束回填原�
 
 ### 4.3 GET C/history/point
 
-Query必填systemCode、recordCode、pointKey，winchCode可选。读取已返回的真实原始点，返回`{systemCode,recordCode,pointKey,sampleFrameId,time,winchReadings,quality,message}`，最多四台实际归档或事件相关读数，身份/质量/总力均后端准备。原始UP不补正常DOWN，事件点从事件快照取。
+Query必填systemCode、recordCode、sampleKey，winchCode可选。读取已返回的真实原始点，返回`{systemCode,recordCode,sampleKey,sampleFrameId,time,winchReadings,quality,message}`，最多四台实际归档或事件相关读数，身份/质量/总力均后端准备。原始UP不补正常DOWN，事件点从事件快照取。
 
-平均桶没有真实sampleFrameId，直接展示已返回的桶读数，不调用此接口伪造现场帧。pointKey只关联既有点，不以客户端高度/时间重新匹配其它采样。
+平均桶没有真实sampleFrameId，直接展示已返回的桶读数，不调用此接口伪造现场帧。sampleKey只关联既有点，不以客户端高度/时间重新匹配其它采样。
 
 ## 5. 告警中心与独立事件
 
