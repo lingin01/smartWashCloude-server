@@ -1,7 +1,17 @@
 # SmartWash PLC 后端
 
 Java 17、Spring Boot 3.2.5、MySQL 8 的单体后端，服务端直接通过 Modbus TCP 读写 PLC。
-当前范围是一套 PLC 下的四台绞机和八路索拉力。设备标识统一为 `deviceId`，对应 `cleaning.plc.devices[].id` 和数据库 `device_id`。
+当前范围是一套 PLC 下的四台绞机和八路索拉力。当前内部设备标识为 `deviceId`，对应 `cleaning.plc.devices[].id` 和数据库 `device_id`；新版页面目标统一使用公开 `systemCode`，由后端映射内部身份。
+
+## 文档从哪里开始看
+
+1. [业务流程与页面数据总览](docs/business-flow-and-page-data-overview.md)：四服务、一次上行、页面与历史的完整流程。
+2. [本次前后端职责对齐](docs/frontend-backend-contract-alignment.md)：2026-10-24附件带来的字段、查询与展示变化，以及未知来源的处理。
+3. [PLC与业务统一方案](docs/unified-plc-business-and-data-plan.md)：点位、状态、运动用途、保存与统计规则。
+4. [数据库设计](docs/database/page-driven-database-design.md)：身份映射、参数/阈值快照、历史与预计算。
+5. [页面接口契约](docs/external-api-contract.md)：新页面地址、输入、输出、推送、告警、归档和导出。
+
+页面细节和文件处理按需看[页面与历史方案](docs/realtime-upward-history-and-detail-plan.md)、[导出方案](docs/data-export-plan.md)。当前已经实现什么，单独看[现有接口参考](docs/current-api-reference.md)和[代码架构](docs/architecture.md)。用户提供的[修订原文](docs/reference/frontend-backend-revision-20261024.md)保留作依据，不将其中示例和建议当成已接通PLC的事实。
 
 ## 数据库与环境
 
@@ -19,7 +29,7 @@ mvn spring-boot:run
 
 ## 当前API
 
-请求参数、返回字段、SSE、命令结果及后续历史/曲线/统计/导出契约见[对外接口说明](docs/external-api-contract.md)。文档区分现有代码行为与待实现接口，不将接口设计当作已开放能力。
+下表是当前代码；真实请求/返回、SSE及命令限制见[现有接口参考](docs/current-api-reference.md)。新版`/api/command-center/...`页面契约另见[页面接口说明](docs/external-api-contract.md)，尚未实施迁移。
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
@@ -35,7 +45,7 @@ mvn spring-boot:run
 
 登录和用户信息沿用 `/api/auth`，账号管理沿用 `/api/admin/user`。当前账号管理权限仍需要单独完善，不能将设备接口鉴权测试理解为全站生产权限验收。
 
-设备字段、控制返回值和URL已统一，前端必须同步更新。没有旧地址别名，也没有远程启动、复位、解除急停、暂停/恢复接口。
+当前设备接口没有旧地址别名，也没有远程启动、复位、解除急停、暂停/恢复接口。新页面systemCode、IDLE、t和显式null需后续表示层适配；不将当前deviceId、STANDBY、kg及省略空字段的响应当成新页面协议。
 
 ## 业务核心与数据流
 
@@ -66,4 +76,4 @@ PLC → 底层驱动/快照队列 → 上层PLC表示入口 → 大厅 → 清�
 
 保留了已有历史批次事务保存实现，`cleaning.history.persistence-enabled` 默认关闭。目前还没有从实时快照识别作业/轮次、生成历史批次的生产链路，也没有历史列表、曲线、轮次/周期统计或可靠原始归档。当前统计接口仅计算实际接收样本，SSE已连接同一份清洗只读状态；没有用空接口冒充未完成的历史功能。
 
-实时缓存和命令状态为进程内数据，重启不能恢复。历史保存范围和年限需另行确定，当前没有自动删除业务历史的任务。
+实时缓存和命令状态为进程内数据，重启不能恢复。目标方案长期保留上行原始与异常历史，当前可靠归档闭环仍待实施；没有自动删除业务历史的任务。
