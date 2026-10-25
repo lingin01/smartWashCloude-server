@@ -2,6 +2,8 @@
 
 核对日期：2026-10-24。本文单独保留当前Java实现的真实行为。新版页面目标以[对外接口说明](external-api-contract.md)和[前后端修订对齐说明](frontend-backend-contract-alignment.md)为准；本轮仅改文档，当前Controller、VO、序列化和权限配置尚未迁移。
 
+2026-10-25再次核对：当前仍为7个清洗、4个认证和6个管理员方法。新页面Controller清单见[实施说明](controller-api-specification.md)。本页login的expiresIn仍按实际代码记毫秒、旧写回执body.code仍随HTTP；新契约要求秒及成功业务code=200，两者是待实施差异，不是本轮已修改。
+
 当前清洗前缀记为`B = /api/cleaning/devices/{deviceId}`。接口使用Bearer访问令牌；GET无请求体，POST/PUT使用JSON。当前Result为`{code,message,data?}`，成功通常200；Jackson配置NON_NULL，可空字段通常省略。安全过滤器拒绝的401可没有JSON响应体。当前测量单位kg、m、m/min，Instant时间通常序列化为UTC的Z。
 
 当前deviceId格式为`[A-Za-z0-9._-]{1,64}`。读取权限device:read，写入权限device:write；实际账号需启用，但尚无逐设备授权名单。格式合法的未知deviceId通常得到无实时快照、空PROCESS统计或未同步参数，而非统一404。

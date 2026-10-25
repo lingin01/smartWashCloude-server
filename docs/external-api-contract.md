@@ -1,6 +1,6 @@
 # 页面对外接口契约：输入、返回与职责
 
-修订日期：2026-10-25。依据[前后端职责修订原文](reference/frontend-backend-revision-20261024.md)、[详情图新报告](reference/detail-force-comparison-report-20261024.md)及[对齐决定](frontend-backend-contract-alignment.md)。本文定义新的页面目标接口，不表示路由、字段、每秒完整推送或历史功能已经实现；本次图表计算细则见[详情拉力对比处理说明](detail-force-comparison-processing.md)。
+修订日期：2026-10-25。依据本次[全部页面报告](reference/frontend-pages-report-20261025.md)、[PLC告警红字说明](reference/plc-alarm-revision-20261025.md)及[对齐决定](frontend-backend-contract-alignment.md)。本文定义新的页面目标接口，不表示路由、字段、每秒完整推送或历史功能已经实现；本次图表细则见[详情拉力对比处理说明](detail-force-comparison-processing.md)，Controller方法、DTO与服务路径见[实施清单](controller-api-specification.md)。
 
 **本页只描述目标。** 当前Java实际接口、kg/STANDBY/NON_NULL返回、命令和鉴权限制已移到[当前接口参考](current-api-reference.md)。以前拟议的`/api/cleaning/devices/{deviceId}/history/...`不再作为页面正式目标，不新增两套未来接口供前端猜选；当前七个设备接口尚未因文档修订而迁移。
 
@@ -10,7 +10,7 @@
 
 API基地址为`/api`，下文`C`表示`/api/command-center`。请求统一使用实际公开systemCode，例如配置中的QJXT-01；动力设备用winchCode，传感器用sensorCode。后端解析内部system_id/deviceId/winchId并核对归属，不让客户端同时提交另一套内部键，不回退到固定TANK-03。
 
-请求携带`Authorization: Bearer <访问令牌>`，写入使用JSON，GET没有请求体。操作者从登录身份取得，不接受客户端自报operatorId；授权系统上下文从user-info取得。
+除登录/刷新按各自凭据外，请求携带`Authorization: Bearer <访问令牌>`，写入使用JSON，GET没有请求体。操作者从登录身份取得，不接受客户端自报operatorId；授权系统上下文从user-info取得。
 
 ```json
 {
@@ -25,18 +25,18 @@ API基地址为`/api`，下文`C`表示`/api/command-center`。请求统一使�
 | 空值 | 定义的可空字段必须出现并为null；空数组[]。0是实际有效值，不表示缺失 |
 | 单位 | 页面拉力t、高度m、速度m/min；数据库仍kg。后端页面转换一次，前端可做t/kg显示格式化 |
 | 时间 | ISO 8601带时区；业务日历Asia/Shanghai。updatedAt是实际采样/内容时间，asOf是视图读取或统计快照时刻 |
-| 查询区间 | 时刻和日期均开始包含、结束排除；格式/查询起止检查不是采样时间校验 |
+| 查询区间 | 运行/采样时刻范围左闭右开；告警history的CUSTOM日期明确包含首尾，内部转右开；格式/起止检查不是采样时间校验 |
 | 业务输出 | 后端给实际名称、状态/结果中文、质量、原因、配对总力和统计；前端不重新推导 |
 | 五态 | 页面IDLE/RUNNING/MAINTENANCE/FAULT/OFFLINE，内部STANDBY可映射IDLE；未知为null＋statusValid=false |
-| 类型 | 编号、sampleKey、序号、版本为string；已知数量integer，尚未构建的数量null；测量number或null；数组无项[] |
+| 类型 | 公开编号、sampleKey、采集序号、配置版本为string；事件revision为正安全整数；已知数量integer，未知null；数值有效0保留 |
 
-显式null是新页面DTO的实施要求，当前全局NON_NULL尚未改变。下文返回对象均放在Result.data内，文件下载与SSE另有协议。
+成功业务码固定code=200，包括HTTP202表示已受理的情况；不能把当前旧接口的code=202直接用于新页面。失败使用相应非2xx HTTP及非200业务码，data.errorCode给出原因。显式null是新页面DTO的实施要求，当前全局NON_NULL尚未改变。下文返回对象均放在Result.data内，文件下载与SSE另有协议。
 
 采集数据不校验早晚、年龄、时钟偏差或是否早于上一帧，不因延迟补入拒收、丢弃或判离线。两索合计基于已确认采集帧、对象、方向、分段和有效性，由后端配对；不猜时间容差，不按相同高度拼接不同过程。
 
 ### 1.2 正式页面接口
 
-附件15个HTTP方法/路径在本后端采用下表。认证地址存在，但修订字段及保护仍需适配；其余页面地址属于待实现目标。
+附件17个HTTP方法/路径在本后端采用下表。认证地址存在，但修订字段及保护仍需适配；其余页面地址属于待实现目标。
 
 | 方法和地址 | 核心输入 | 返回用途 |
 |---|---|---|
@@ -49,22 +49,25 @@ API基地址为`/api`，下文`C`表示`/api/command-center`。请求统一使�
 | GET `C/winch/detail` | systemCode、winchCode | 本机详情快照 |
 | GET `C/winch/tension/trend` | systemCode、winchCode、viewType、comparisonView | 四来源曲线与统计 |
 | GET `C/archive` | systemCode、指标及比较范围 | 左右图、对齐轴和汇总 |
-| GET `C/alarm-dashboard` | systemCode、筛选、分页 | 告警统计/列表/详情 |
+| GET `C/alarms/latest` | systemCode、deviceCode可选 | 完整近期事件与hasAttention |
+| GET `C/alarms/history` | systemCode、range、levels、设备、日期、分页 | 服务端筛选的事件历史 |
+| PUT `C/winch/tension-thresholds` | systemCode、winchCode、两路阈值、requestId、expectedVersion | PENDING/APPLIED与真实生效快照 |
 | GET `C/history/list` | systemCode、scope、范围、分页 | 单次记录与日期目录 |
 | GET `C/history/detail` | systemCode、recordCode | 单次概要、曲线、统计、事件 |
 | GET `C/parameter-settings` | systemCode | 已保存与已生效参数 |
 | PUT `C/parameter-settings` | systemCode、requestId、expectedVersion、三参数 | 保存/下发阶段 |
 | GET `/api/users` | keyword、page、pageSize | 只读用户列表 |
 
-另外确定必要的目标传输/后续读取入口：`GET C/home/stream`、`GET C/commands/{commandCode}`、`GET C/history/point`及第8节四个导出任务接口，不将其算成附件15项已经实现。
+另外确定必要的目标传输/后续读取入口：`GET C/home/stream`、`GET C/commands/{commandCode}`、`GET C/history/point`、`GET C/events/history`、`GET C/events/{eventCode}`及第8节四个导出任务接口，不将其算成附件17项已经实现。
 
-旧rangeType分支、独立run-comparison和独立torque-force/trend不再正式对接。视频、模型上传/运算、巡检和新分析模块没有本轮接口。远程启动、复位、解除急停、暂停/恢复、单轴升降仍未开放。
+旧alarm-dashboard、旧rangeType分支、独立run-comparison和独立torque-force/trend不再正式对接。视频、模型上传/运算、巡检和新分析模块没有本轮接口。远程启动、复位、解除急停、暂停/恢复、单轴升降仍未开放。
 
 ### 1.3 响应预算
 
 | 请求 | 初版预算建议 |
 |---|---|
-| 历史/告警/用户列表 | page默认1、pageSize默认10，最大100 |
+| 运行历史/告警历史/独立事件/用户列表 | page默认1、pageSize默认10，最大100 |
+| 最新告警 | 完整近期集合最多1000项预算，超限503并说明，不能静默截断；前端可本地每页10条 |
 | 导出记录列表 | page默认1、pageSize默认20，最大100 |
 | COUNT曲线 | 每批默认5个运行分组、最多10；cursor继续，返回总分组数 |
 | 单次/周期曲线 | 每序列默认500、最多2000点；整个响应最多16000点及断点 |
@@ -99,7 +102,7 @@ Sensor字段：`sensorCode、sensorName、winchCode、groupNo、metric、positio
 
 faultSources项：`{objectType:SYSTEM/WINCH/SENSOR,objectCode,objectName,faultCode,reasonCode,message}`。未知设备归属不强填；单传感器故障不自动等于动力设备本体损坏，普通系统故障不无条件改写四台状态；共享急停影响明确SYSTEM_EMERGENCY，不声称四台本体均坏。
 
-notices项：`{code,message,objectType,objectCode}`，全局说明对象可null。阈值缺失时数值null、说明THRESHOLD_NOT_CONFIGURED；无证据的测点NORMAL/WARNING/ALARM不可编造，status=null、statusValid=false。后端比较已确认配置，现场联锁仍由PLC执行，不因此增加自动控制下发。
+notices项：`{code,message,objectType,objectCode}`，全局说明对象可null。阈值缺失时数值null、说明THRESHOLD_NOT_CONFIGURED；无证据的测点NORMAL/WARNING/ALARM不可编造，status=null、statusValid=false。传感器NORMAL/WARNING/ALARM依据明确PLC状态信号映射；阈值配置用于展示和下发，后端不比较每笔拉力自行新增故障。缺少PLC普通/严重映射时不猜等级；缺少阈值不应抹去已确认PLC错误。
 
 ### 2.2 GET C/home/stream
 
@@ -123,176 +126,205 @@ data: {"code":200,"message":"快照推送","data":{"systemCode":"QJXT-01"}}
 
 ### 3.1 GET C/winch/detail
 
-systemCode、winchCode必填。进入、主动刷新和重试时读一次；不订阅首页SSE，不5秒自动刷新。
+Query必填systemCode、winchCode。响应WinchDetailResponse；进入、切换设备、浏览器刷新或失败重试时查询，不订阅首页SSE、不5秒自动刷新。详情成功后再请求趋势。
 
-| 返回字段 | 类型 | 说明 |
-|---|---|---|
-| systemCode、updatedAt、asOf | string / time或null / time | 系统与真实快照时刻 |
-| winch、sensors | Winch / Sensor[] | 当前这台及两测点，首页同口径 |
-| currentHeight、currentMode | number或null / AUTO、MANUAL或null | 本机高度m、模式 |
-| setSpeedMPerMinute | number，必返有效 | 已确认适用生效设定，不用实际/额定速度替代 |
-| todayCompletedCount、countBasis、countText | integer或null / STARTED_DATE / string | 今日开始记录中的确认完成数与说明 |
-| runningHours、motionCoverage | number或null / COMPLETE、PARTIAL、UNCONFIRMED | 本机生产UP可靠运动小时，不当完整上下行工时 |
-| maintenanceAt | time或null | 最近维护真实记录 |
-| torqueForce | object或null | 独立反馈`{value,unit:"t",sourceName,quality,missingReason}` |
-| configurationVersion、statisticsState、notices | string / READY、UPDATING、NOT_BUILT / array | 生效版本、统计状态、说明 |
+| 返回字段 | 类型/说明 |
+|---|---|
+| systemCode、updatedAt、asOf | string、真实快照时刻或null、查询时刻 |
+| winch、sensors | 第2节Winch及本机两路Sensor；来源编号/名称/ropeNo由后端提供 |
+| currentHeight、currentMode | m或null；AUTO/MANUAL或null |
+| setSpeedMPerMinute、configurationVersion | 已确认适用设定速度number、真实生效配置版本string；成功详情必须有效 |
+| todayCompletedCount、countBasis、countText | integer或null；STARTED_DATE；今日开始记录中的确认完成数及中文说明 |
+| runningHours、motionCoverage | 本机生产UP可靠运动小时或null；COMPLETE/PARTIAL/UNCONFIRMED，不当全上下行工时 |
+| maintenanceAt、torqueForce | 维护实际时间或null；独立反馈{value,unit:t,sourceName,quality,missingReason}或null |
+| thresholdSettings | {savedVersion,savedThresholds,appliedVersion,effectiveThresholds,applyStatus,commandCode,message}；两路对象见第7.3节 |
+| statisticsState、notices | READY/UPDATING/NOT_BUILT及说明 |
 
-成功详情不含ratedLoad/ratedSpeed，不强制未展示的当前/上一记录摘要。未取得有效适用设定速度时409 CONFIGURATION_NOT_READY，不能把0、默认10或实测值填成功响应。新参数仅保存或写应答确认时继续展示原已确认生效版本；没有旧版本则未就绪。
+成功详情不含ratedLoad/ratedSpeed。未取得真实有效速度时409 CONFIGURATION_NOT_READY，不能用实际、额定或默认速度填成功响应。阈值未就绪不必隐藏其他已知测量：可空版本/配置如实null，说明未同步。传感器显示的是已确认适用阈值；申请草稿不能覆盖它，部分写入时明确确认范围。
 
 ### 3.2 GET C/winch/tension/trend
 
 | Query | 类型 | 必填/默认 |
 |---|---|---|
 | systemCode、winchCode | string | 是 |
-| viewType | FORCE_COMPARISON | 是，仅此正式视图 |
+| viewType | FORCE_COMPARISON | 是 |
 | comparisonView | COUNT/DAY/MONTH/YEAR | 是 |
-| cursor | string | 可选，续读时保持原筛选 |
-| maxPointsPerSeries、unitPageSize | integer | 按第1.3节；unitPageSize仅COUNT |
+| resolution | OVERVIEW/RAW | 默认OVERVIEW；完整点表用RAW分批取得 |
+| cursor | string | 可选，续读保持原筛选/分辨率 |
+| maxPointsPerSeries、unitPageSize | integer | 第1.3节预算，unitPageSize仅COUNT |
 
-COUNT返回kind=BATCH，一次生产上行一组；其余为kind=PERIOD。旧通用kind的WEEK/MONTH/WHOLE不作为本期正式输出类型。
+COUNT为kind=BATCH，一次生产上行一组；其余为PERIOD，横轴仍是高度。分组固定标识：DAY返回TODAY/YESTERDAY/MONTH/YEAR；MONTH返回MONTH/PREVIOUS_MONTH/PREVIOUS_YEAR；YEAR返回YEAR/PREVIOUS_YEAR。缺同期数据保留empty=true的分组与原因，不造0线。COUNT按实际开始时间升序、稳定记录编号排序，未知边界单列说明，后端顺序稳定；初次前端选择首个已返组，不强制defaultUnitId。
 
-| comparisonView | 后端units分组 |
+返回WinchTrendResponse：`{systemCode,winchCode,kind,comparisonView,units,series,heightMin,heightMax,heightLimits,dataRange,asOf,updatedAt,resolution,complete,nextCursor,totalUnits,loadedUnits,loadedPointCount,aggregation,notices}`。计数只在确知时给值，否则null；未知限位null，不填0～30m。
+
+| 对象 | 字段和含义 |
 |---|---|
-| COUNT | 今日开始的实际生产上行记录，含进行中；分批返回，回显开始日口径 |
-| DAY | 今日、昨日、本月、本年 |
-| MONTH | 本月、上月、去年同期 |
-| YEAR | 本年、去年同期 |
+| units[] | id、name、recordCode或null、periodType或null、startAt、endAt、endExclusive=true、rangeLabel、dataThrough、runState、recordState、runResult、runResultText、abnormal、empty、emptyReason、includedRunCount |
+| series[] | id、unitId、winchCode、sourceRole、sourceCode或null、sourceSensorCode或null、name、unit=t、empty、emptyReason、segments |
+| sourceRole | SENSOR1/SENSOR2/ROPE_TOTAL/SERVO；总力是派生来源，不是第三个实体传感器 |
+| segments[] | segmentCode、motionRole、gapBefore、points；保留换向、用途和缺口 |
+| 原始points[] | sampleKey、sampleFrameId、sequence、time、height、value、speed、direction、motionRole、quality、valueValid、speedValid、missingReason、sampleCount |
+| 平均points[] | sampleKey、sampleFrameId=null、time=null、height、heightFrom、heightTo、value、speed、quality、sampleCount、speedSampleCount、heightRuleVersion、computedVersion |
 
-顶层返回：`systemCode、winchCode、kind、comparisonView、defaultUnitId、units、series、heightMin、heightMax、heightLimits、dataRange、asOf、updatedAt、complete、nextCursor、totalUnits、loadedUnits、aggregation、notices、pointReadings`。未知高度/限位、nextCursor显式null；无实际高度不造0～30m。无数据的预期周期仍有empty=true的unit与原因，不画0线。
+原始有效sampleCount=1，无效=0；平均为真实有效样本数，0时value=null，尚未构建的数量null。拉力与速度分别保留有效性，拉力缺失不强制抹去有依据的速度。有效0保留；GOOD/PARTIAL仍须对应通道有效依据，原始点不因缺sampleCount就默认1。sampleKey由明确帧/本机/分段生成，平均键来自周期/本机/桶与版本；相同高度重复经过不能同键，不能按邻近时间拼接。过程顺序用采集序号，不做采样时间校验。
 
-defaultUnitId为string或null，由后端确定且必须属于首批实际返回的units。COUNT优先有明确依据的进行中、其次最近确认完成、再其他实际记录；PERIOD优先当前非空周期再其他非空组，全部为空返回null。后续游标保持此初始默认值，不覆盖用户选择。左图“全部次数”叠加已加载分组，右上只看当前unit/sampleKey，右下只看当前unit完整统计；首次没有命中点时上表为空，默认组只提供下表统计。顶部详情快照独立。
+图表runState仅RUNNING/COMPLETED/null：分别表示进行中/已结束/未知；COMPLETED不能证明业务成功。recordState保留IN_PROGRESS/ENDED/UNCONFIRMED，最终runResult按第4节另行表达。PERIOD不适用的运行字段null。
 
-| 对象 | 内容 |
-|---|---|
-| units[] | id、name、periodType或null、recordCode或null、startTime、endTimeExclusive、dataFrom、dataThrough、empty、emptyReason、runState、runResult、runResultText、includedRunCount、sourceIncludedRunCounts、ropeExtrema、statisticsState |
-| series[] | unitId、winchCode、sourceRole、sourceCode或null、name、unit=t、empty、emptyReason、segments、statistics、rawStatistics |
-| sourceRole | SENSOR1/SENSOR2/ROPE_TOTAL/SERVO，四来源由后端准备，图例仅选择已返数据 |
-| segments[] | segmentCode、motionRole、gapBefore、points；原始按采集顺序，平均按高度桶，不跨缺口连线 |
-| statistics / rawStatistics | averageTension、maxTension、minTension、validSampleCount、bucketCount、metricBasis、scope、heightRuleVersion、message；未知或不适用字段null |
-| ropeExtrema | maxTension、minTension、metricBasis、unit=t、message；仅两单绳完整曲线集合，不含总力/伺服 |
+ROPE_TOTAL在原始同帧、本机、用途与两路有效关联明确时先求和再聚合。总力速度用该帧已确认适用本机速度，不能相加速度或默认抄第一根；平均速度使用配对集合自己的有效和/数量。平均曲线用已保存sum/count合并，不直接相加独立单绳均值。原精度计算，页面边界kg转t，前端最后格式化。
 
-runState为IN_PROGRESS/ENDED/UNCONFIRMED或null，runResult单独表达完成、终止和未确认；不将ENDED一律叫COMPLETED。非空分组仍提供四来源的结构，某来源没有数据时segments=[]、empty=true及原因，不让前端生成合计曲线。
+新版右侧是当前曲线逐点表，**不强制返回statistics、rawStatistics、ropeExtrema、defaultUnitId或旧四来源单点表**。数据库摘要仍供列表/归档使用。动力页SUM需改为消费ROPE_TOTAL；历史页没有SUM入口。
 
-原始点：`{sampleKey,sampleFrameId,time,height,value,quality,missingReason,speed,direction,motionRole,sampleCount}`。原始有效sampleCount=1，无效为0且value=null。平均点：`{sampleKey,sampleFrameId:null,time:null,height,heightFrom,heightTo,value,quality,missingReason,sampleCount,speed,speedSampleCount}`；数量为该来源真实有效样本数，value为后端sum/count得到的t值，不是原始帧。样本数缺失不能按1兜底；未构建的数量null、已确认空集合为0。有效0保留，GOOD/PARTIAL仍需对应通道数值有效依据，INVALID/OFFLINE不计入有效值。
+OVERVIEW明确NONE/MIN_MAX/HEIGHT_BUCKET及显示粒度，只供概览，不冒充全点。RAW在COUNT返回实际保存的原始点，在PERIOD返回完整基础桶；均分批续读，最后complete=true才表示请求范围已读完，不表示无采集缺口。当前前端尚无这一续读契约，需同步改点表加载，不能一口气返回全年原始数据。
 
-pointReadings为`[{unitId,winchCode,sampleKey,time,height,readings:[{sourceRole,value,unit,quality,speed,missingReason}]}]`，由后端准备同unit可对照数据，计入总预算。sampleKey取代上版未实施的pointKey，只维护一个页面关联键；真实帧仍为sampleFrameId。原始键来自已确认帧、本机和分段，平均键来自周期、本机、规则/计算版本及基础桶。不能配对的来源值null，不取另一次同高度/最近时间点凑数；右表与图表标记都只按同键读取。共享平均桶键不表示不同来源具有相同样本集合。
-
-| 统计对象 | metricBasis与固定口径 |
-|---|---|
-| COUNT statistics | RAW_CURVE_SAMPLES：完整PRODUCTION_UP可画曲线原始集合的均值和瞬时极值；缺高度值不在此集合 |
-| PERIOD statistics | HEIGHT_BUCKET_MEANS：完整基础高度桶sum合计/count合计得到均值，maxTension/minTension为非空基础桶均值的最高/最低；validSampleCount为桶有效样本数之和 |
-| rawStatistics | RAW_VALID_SAMPLES：完整有效生产原始测量均值/瞬时极值，包含缺高度测量；不从平均曲线反推 |
-| unit.ropeExtrema | COUNT为两单绳原始曲线集合，PERIOD为两单绳基础桶均值集合；metricBasis跟随上述对应statistics |
-
-scope为`{unitId,winchCode,motionRole:"PRODUCTION_UP",startTime,endTimeExclusive}`，实际未知边界null；rawStatistics与曲线对象保持同一运行/周期。bucketCount仅PERIOD基础桶统计适用，heightRuleVersion对应基础桶规则，其余null。统计准备状态采用unit.statisticsState=READY/UPDATING/NOT_BUILT并给说明，未算不伪装为0。本轮明确修订PERIOD maxTension/minTension语义，移除上版maxAverageTension/minAverageTension，原始峰值单独保留在rawStatistics。
-
-ROPE_TOTAL先按实际共同有效配对样本求和再聚合；总力极值不是两个单绳极值之和。总力速度来自该帧已确认适用的本机速度，未知null，不相加速度或默认抄SENSOR1；平均速度在配对集合内使用自己的有效和/数量。有效报警峰值仍保留。后端按原精度计算、页面边界kg转t，前端最后格式化，不相加已经舍入的显示值。
-
-includedRunCount是该分组四来源并集去重运行数，sourceIncludedRunCounts为`{SENSOR1,SENSOR2,ROPE_TOTAL,SERVO}`各来源去重数，替代recordCount/sourceRecordCounts；points.sampleCount是有效样本数，不用运行数作权重。未计算的数量null；已知空集合为0。
-
-statistics和rawStatistics都基于完整逻辑集合，不从本批曲线、显示合桶或缩减点重算；分页、图例、缩放不改变右下统计。生产平均只取PRODUCTION_UP，恢复/检修原始另标用途/段，不加生产次数；正常DOWN没有完整历史曲线。aggregation回显NONE/MIN_MAX/HEIGHT_BUCKET及实际显示粒度，PERIOD右侧固定使用heightRuleVersion基础桶；complete只表示范围加载完整，不表示无缩减。附件含上下行/回退的模拟均值不作为正式生产统计的等值承诺。
-
-## 4. 历史列表与单次详情
+## 4. 系统历史列表与单次详情
 
 ### 4.1 GET C/history/list
 
-| Query | 类型 | 必填/默认 |
-|---|---|---|
-| systemCode、scope | string / RUN | 是，仅上行单程列表 |
-| startTime、endTime、endExclusive | time/time/boolean | 是，带时区，固定右开true |
-| dateBasis | STARTED/FIRST_OBSERVED | 默认STARTED，观测筛选不替代实际开始日 |
-| includeAvailableDates | boolean | 默认false，日历首次加载建议true |
-| availableDatesCursor | string | 可选，全历史日期目录独立续读 |
-| page、pageSize | integer | 默认1/10，最大100 |
-| winchCode、runResult | string | 可选，真实参与设备与结果筛选 |
-
-返回`{systemCode,entries,total,page,pageSize,filters,availableDates,availableDatesComplete,availableDatesNextCursor,datesBasis,asOf,dataRange}`。按所选时间依据倒序、recordCode稳定排序；STARTED不含无实际开始记录，FIRST_OBSERVED可查但不改startedAt。
-
-availableDates覆盖本系统全历史可查询RUN日期，与当前列表时间/结果/分页筛选独立；STARTED与观测日期目录明确datesBasis。轻量日期目录升序分批，最后complete=true；未请求时dates=[]、complete=false，不代表全历史为空。只有异常的日期不造RUN。
-
-RunEntry固定字段，可空值显式null：
-
-| 字段 | 口径 |
+| Query | 必填/默认 |
 |---|---|
-| recordCode、systemCode、recordScope、directionScope | 稳定编号、实际系统、固定LEG/UP；四台同步仍一条 |
-| startedAt、endedAt、firstObservedAt、lastObservedAt | 实际边界与观测分开 |
-| durationSeconds、durationText、motionDurationSeconds | 记录历时、后端说明、可靠系统生产运动时长；未知null |
-| state、runResult、completionKind、runResultText | state=IN_PROGRESS/ENDED/UNCONFIRMED；result=COMPLETED/TERMINATED/UNCONFIRMED或null；完成分类NORMAL/RECOVERED/UNCONFIRMED或null；中文为后端最终结论 |
-| endReason、endReasonText、startMethod、startMethodText | 真实结束/启动原因及说明，AUTO不等于定时 |
-| setSpeedMPerMinute、intervalMinutes、startTime、parameterVersion | 当次开始时已确认参数；未知null，不用当前配置回填 |
-| abnormalCount、alarmCount、handlingAttemptCount | 异常事件数、告警数分开；无逐次处理事实时attempt为null，不由D3=50补五次 |
-| maxTension、minTension、unit | 生产UP有效钢绳原始极值t，不含电机/配对总力/下行快照 |
-| hasDataGap、boundaryConfirmed、operatorName | 已知缺口、边界依据、可验证后台账号或null |
+| systemCode、scope=RUN | 是，一次系统生产上行，四台同步仍一条 |
+| startTime、endTime、endExclusive=true | 是，ISO带时区，startTime <= startedAt < endTime |
+| dateBasis | STARTED默认；FIRST_OBSERVED可查未知实际开始记录，不改startedAt |
+| includeAvailableDates、availableDatesCursor | 默认false；页面首次true，日期目录独立续读 |
+| page、pageSize | 1/10，最大100 |
+| runResult | 可选，第4.2节最终结果枚举 |
+| winchCode | 可选导航上下文，仅回显；不把系统列表筛成单台，也不改全系统极值 |
 
-todayCompletedCount及周期结果按开始日记录组；跨日结束回填原开始日，不在结束日新增一次。前端直接展示runResultText，不看事件数组猜结果。
+返回RunListResponse：`{systemCode,entries,total,page,pageSize,filters,availableDates,availableDatesComplete,availableDatesNextCursor,datesBasis,asOf,enabledFrom,dataRange}`。默认所选开始依据倒序、公开记录id倒序；total是筛选系统记录数，不是曲线、设备或事件数。
 
-### 4.2 GET C/history/detail
+availableDates来自本系统全历史真实RUN日期目录，不受当前页/日期/结果筛选截断；按日期独立分批，前端必须读取至availableDatesComplete=true才称完整日历。未请求目录时数组[]、完整false；只有异常的日子不造RUN。当前前端只接单次完整目录，需适配续读，不能把366个日期上限当永久保留期限。
 
-必填systemCode、recordCode。可选winchCode（不填四台）、maxPointsPerSeries、cursor、eventCursor，以及成对fromAt/toAt或heightMin/heightMax用于局部查询；显示高度不等于机械限位。
+### 4.2 RunEntry：列表、详情共用
 
-返回`{systemCode,entry,sensors,servos,ropeTotals,statistics,exceptionEvents,eventTotal,eventsComplete,eventNextCursor,heightMin,heightMax,heightLimits,pointReadings,asOf,complete,nextCursor,aggregation}`。series、统计和取点关系沿用第3.2节，明确每台两索、一伺服、一配对总力，不混四台总和。未知参数/限位null。
+| 字段 | 类型与范围 |
+|---|---|
+| id、kind、name | 公开稳定record_code、固定RUN、实际名称；前端entry.id作为下一请求recordCode，不另造主键 |
+| startDate、endDate | 上海业务覆盖日期或null，结束日标签不代表查询右开时间 |
+| startedAt、endedAt、firstObservedAt、lastObservedAt | 实际边界与观测边界分开，未知null |
+| state、runResult、completionKind | IN_PROGRESS/ENDED/UNCONFIRMED；下表结果或null；NORMAL/RECOVERED/UNCONFIRMED或null |
+| runResultText、statusText、endReason、endReasonText | 后端最终结果说明；statusText供现页面，前端不再依据事件数组猜结果 |
+| startMethod、startMethodText、sequenceNo | SCHEDULED/MANUAL或null，真实来源文字，当日序号有依据才给；AUTO不是定时启动证据 |
+| durationSeconds、durationText、motionDurationSeconds | 记录历时与可靠生产运动时长分开，未知null；不把实时当前时钟补成旧记录时长 |
+| setSpeedMPerMinute、intervalMinutes、startTime、parameterVersion | 该次开始时已确认参数快照，未知null，不用当前设置回填 |
+| maxTension、minTension、unit、extremaScope | 本系统该记录全8路单绳有效PRODUCTION_UP原始集合极值，t；固定SYSTEM_EIGHT_ROPES_PRODUCTION_UP |
+| abnormalCount、alarmCount、handlingAttemptCount | 可靠关联的保护异常过程数、告警过程数、实际处理尝试数；无来源null，不由D3=50补5次 |
+| runCount、completedCount、normalCompletedCount、recoveredCount、faultTerminatedCount、incompleteCount | RUN计数为1或未确认；其余依据已确认最终结论0/1，未确认部分null，不把进行中当失败 |
+| exceptionEvents、exceptionEventsComplete、eventTotal | 有界真实保护过程摘要；无明细可[]但完整false，不能把未加载叫没有事件 |
+| hasDataGap、boundaryConfirmed、operatorName、dataCoverage | 缺口/边界依据、可验证操作账号或null、各通道覆盖说明 |
 
-概要/统计采用完整事实口径，曲线首批为有界概览，后续cursor或局部范围继续。事件默认最多10项，eventTotal为完整关联数量，eventCursor续读，不等于首批数组长度。回显请求范围与asOf；普通多次请求不承诺同一不变数据库版本，一致文件走导出。
-
-事件项：eventCode、alarmCode或null、direction、occurredAt或null、firstObservedAt、outcome、outcomeText、recoveredAt或null、terminatedAt或null、reason、snapshots。最多触发/恢复/终止三类必要快照，不放连续DOWN窗口；没有可靠RUN关联的下降事件独立查询，不挂最近一条上行。
-
-### 4.3 GET C/history/point
-
-Query必填systemCode、recordCode、sampleKey，winchCode可选。读取已返回的真实原始点，返回`{systemCode,recordCode,sampleKey,sampleFrameId,time,winchReadings,quality,message}`，最多四台实际归档或事件相关读数，身份/质量/总力均后端准备。原始UP不补正常DOWN，事件点从事件快照取。
-
-平均桶没有真实sampleFrameId，直接展示已返回的桶读数，不调用此接口伪造现场帧。sampleKey只关联既有点，不以客户端高度/时间重新匹配其它采样。
-
-## 5. 告警中心与独立事件
-
-### GET C/alarm-dashboard
-
-| Query | 类型 | 必填/默认 |
+| 最终事实 | 页面runResult | 说明 |
 |---|---|---|
-| systemCode | string | 是 |
-| range | TODAY/7D/30D/CUSTOM | 默认TODAY，仅历史列表日期窗口 |
-| startDate、endDate | date | CUSTOM必填，左闭右开 |
-| deviceCode、sensorCode | string | 可选；deviceCode在本接口映射winchCode，不是内部deviceId |
-| category | string | 可选，取后端类别清单 |
-| view | ACTIVE/HISTORY | 默认ACTIVE，覆盖全历史尚未确认恢复 |
-| recordKind | ALARM/EVENT | 默认ALARM；EVENT限view=HISTORY，查询全部真实事件（含非告警），不要求关联RUN |
-| page、pageSize | integer | 默认1/10，最大100 |
-| alarmCode、eventCode | string | 详情定位可选且互斥；真实非告警事件可按eventCode查看 |
+| 已确认完成 | COMPLETED | completionKind及文字区分正常/异常恢复后完成 |
+| 已明确非故障提前退出 | INCOMPLETE | 如真实中断；不是“还在运行” |
+| 已明确故障导致终止 | FAULT_TERMINATED | 急停只有实际归类及退出依据才映射；保留真实endReason |
+| 仍进行或结果证据不足 | null | 分别返回state及原因，前端需支持，不造成功/失败 |
 
-返回`{systemCode,statistics,historyRange,recordKind,list,total,page,pageSize,filters,asOf,detail,categoryOptions}`。非详情查询detail=null，categoryOptions为code/text集合。recordKind=ALARM时list是告警集合；EVENT时list是事件集合，前端可先分页发现独立DOWN事件，再按eventCode查看详情，不要求先知道编号或具备RUN关联。EVENT与ACTIVE组合返回400；其余筛选含义不变。
+endReason可为COMPLETED/NEXT_SCHEDULE_REACHED/FAULT/MANUAL_STOP/EMERGENCY_STOP，只有真实来源才赋值，其余null并说明；当前PLC未给定时/下次计划等来源时不补写。内部已有结果枚举不因页面映射而改库。
 
-历史窗口按Asia/Shanghai自然日：TODAY为今日零点至次日零点，7D从今日前6天零点至次日零点，30D从今日前29天零点至次日零点；CUSTOM采用传入右开区间。窗口不校验采样新旧，响应另列asOf及实际数据覆盖。
+max/min是8路单绳中一个最大和一个最小，可能来自不同通道/时刻；不是8路相加，不含伺服、双绳总力或正常DOWN。缺通道保留覆盖说明，当前图只选动力二号也不改变这两个数。次数/最终结果仍归开始日，todayCompletedCount口径不改为结束日。
 
-statistics含activeCount、seriousActiveCount、recoveryUnconfirmedCount、todayCount、todayRecoveredCount、scope、asOf和说明。固定scope=SYSTEM_ALL，不受设备/测点/类别/历史日期筛选裁剪。activeCount含所有尚未确认恢复的历史告警；serious只含已明确严重级别，未知不猜；今日发生与今日恢复分别按对应实际/观测时刻。
+### 4.3 GET C/history/detail
 
-ACTIVE列表保留设备/测点/类别筛选，日期窗口不生效，historyRange说明NOT_APPLIED_TO_ACTIVE。HISTORY按实际发生/首次观测日期筛选，默认该时刻倒序、eventCode第二排序，稳定事件标识去重，持续异常不每帧新增。statistics始终只统计明确isAlarm=true的告警，不随recordKind变化。
+必填systemCode、recordCode；yearGrouping可省略或MONTH，仅兼容现请求，其他值400，不表示RUN改为月统计。目标可选resolution=OVERVIEW/RAW（默认OVERVIEW）、cursor、maxPointsPerSeries、eventCursor及成对fromAt/toAt或heightMin/heightMax；winchCode/来源若用于局部加载只裁曲线，不裁entry的系统范围。
 
-告警项固定字段：alarmCode、eventCode、systemCode、objectType、objectCode、objectName、winchCode、sensorCode、category、categoryText、level、levelText、state、stateText、handlingText、occurredAt、firstObservedAt、recoveredAt、archivedAt、recoveryState、content、triggerValue、threshold、unit、thresholdKind、thresholdKindText、configurationVersion。未知编码/数值/时间null并说明；拉力单位t，其余按真实量纲。
+返回RunDetailResponse：`{systemCode,entry,sensors,servos,heightMin,heightMax,heightLimits,asOf,dataRange,resolution,complete,nextCursor,loadedPointCount,aggregation,exceptionEvents,eventTotal,eventsComplete,eventNextCursor,notices}`。sensors正常配置8条、servos4条，每条有id/name、winchCode、groupNo、ropeNo（伺服null）、sensorCode或null、sourceRole、unit=t、segments/points、空态与质量说明。历史sourceRole=ROPE1/ROPE2/SERVO，ropeNo=1/2；不得从S1～S8后缀猜实体关系。
 
-类别/等级/阈值类别按明确配置/PLC事实，没有依据不编造。recoveryState为ACTIVE/RECOVERED/UNCONFIRMED；state为后端显示结论，归档与恢复原事实分开，archivedAt非空或运行已终止不证明故障恢复。历史阈值、版本和名称来自触发时快照，不用新配置改写旧告警；处理次数无来源仍null。
+原始点与分段沿用第3.2节。**这里不返必需ropeTotals或旧统计双表**；右侧显示当前曲线全部已加载的真实点，RAW游标读完才称已读完整范围，保留重复高度、恢复/检修UP用途及缺口，不把正常DOWN补成连续曲线。概览缩减点不能用于冒充原始全点表或导出。系统RUN仍是生产UP单程，不因前端叫“一轮”扩大为已确认完整往返。
 
-Event字段为eventCode、isAlarm、alarmCode或null、recordCode或null、systemCode、objectType、objectCode、objectName、direction、occurredAt或null、firstObservedAt、outcome、outcomeText、recoveredAt或null、terminatedAt或null、reason、hasSnapshots。EVENT列表返回这些摘要，不带连续采样；非告警事件不强造等级/阈值。detail包含Event、alarm（非告警为null）、最多触发/恢复/终止三个阶段快照及后端说明。
+关联保护事件摘要字段为eventCode、alarmCode或null、occurredAt/timeBasis、outcome、outcomeText、returnedAt/resumedAt或null、reason。实际无逐次处理事实时attemptCount=null，不虚构回零/恢复时刻。默认10项有界摘要，详情通过events/{eventCode}查看；没有RUN关联的DOWN异常由独立events/history发现，不挂最近一条上行。
 
-## 6. 数据归档：两图、比较与预计算
+### 4.4 GET C/history/point
+
+Query必填systemCode、recordCode、sampleKey，winchCode可选。返回`{systemCode,recordCode,sampleKey,sampleFrameId,time,winchReadings,quality,message}`，只追溯已返回的真实帧，最多四台有依据读数；不以客户端高度/时间重配，也不为平均桶伪造现场帧。没有RUN关联的事件点使用events详情，不硬填recordCode。
+
+## 5. PLC告警：最新、历史与独立事件
+
+规则见[PLC事件方案](plc-alarm-and-threshold-processing.md)。PLC判断错误等级，后端维护同一alarmCode持续/升级/结束，前端只显示；后端不得按每笔拉力比较阈值新增故障。新查询退出旧alarm-dashboard，不再强制activeCount统计卡、分类过滤或人工恢复字段。
+
+### 5.1 GET C/alarms/latest
+
+Query仅systemCode必填、deviceCode可选（公开winchCode值）。不接range、日期或页码。返回`{systemCode,asOf,recent,hasAttention,attentionScope,recentWindowHours,windowStart,windowEnd,complete,demo}`，real production demo=false。
+
+recent为完整近期AlarmItem[]；目标为所有尚未明确结束事件＋最近24小时结束事件，配置和实际边界回显。跨日持续事件不丢，hasAttention固定SYSTEM_ALL，不受设备过滤影响。有未结束PLC错误或尚未恢复的已确认PLC连接异常即true；无事实源时503，不编造false。窗口不是采样过期或历史删除规则。complete成功固定true；超过1000项预算返回503 RECENT_SET_TOO_LARGE，不静默截断。
+
+侧栏/告警页可共用可见时每15秒一次请求，查询不写事件。前端按开始时刻倒序及alarmCode稳定排序后本地分页10条；点击/关闭详情不清红点。响应失败保留上次视图，不生成PLC离线事件。
+
+### 5.2 GET C/alarms/history
+
+| Query | 约定 |
+|---|---|
+| systemCode | 必填 |
+| deviceCode | 可选所属动力设备，映射公开winchCode |
+| range | TODAY/7D/30D/CUSTOM，默认30D |
+| startDate、endDate | CUSTOM必填，YYYY-MM-DD、上海日期包含首尾，1～366天；其他range由后端生成 |
+| levels | 默认NORMAL,SERIOUS；逗号分隔，显式空字符串表示不选等级、返回空结果，不能@NotBlank后改全选 |
+| includeUnclassified | 默认false；显式true可查询尚未确认级别的实际事件，不硬映射NORMAL |
+| page、pageSize | 1/10，最大100 |
+
+返回`{systemCode,asOf,historyRange:{startDate,endDate,endInclusive:true},effectiveRange:{startAt,endAt,endExclusive:true},list,total,page,pageSize,demo}`。先按事件显示起点、已确认等级、设备筛选再分页，开始倒序、alarmCode倒序；total去重事件数。同一过程持续/升级/结束仍一条。7D为今日前6天至今日，30D为前29天至今日；内部转次日零点右开，回显原日期包含约定。
+
+旧响应不能回滚更大revision；历史页不拿recent补数，也不覆盖最新集合成员。等级筛选匹配当前已确认等级，不按旧状态文本推测；等级从SERIOUS降回NORMAL是否仍同一过程必须现场确认，未确认不加算法。
+
+### 5.3 AlarmItem与事件更新
+
+| 字段 | 类型/含义 |
+|---|---|
+| alarmCode、eventCode、systemCode | 稳定公开编号及所属系统；alarmCode映射真实eventCode用于详情，更新不变 |
+| deviceCode、deviceName | 真实所属设备或null；系统级故障不能硬填某一台 |
+| source、type、content | PLC/PLATFORM，明确错误类型/错误码解释、PLC原文；不由页面关键词重判 |
+| runCode | 可靠关联的recordCode或null，跨RUN不据此拆事件 |
+| level、levelConfirmed | NORMAL/SERIOUS或null；未知false，不输出旧MEDIUM |
+| occurredAt、timeBasis、actualOccurredAt、firstObservedAt | 显示起点；ACTUAL/FIRST_OBSERVED；实际发生未知null；持续更新不改起点，后补真实起点按同号修订推进版本；均带时区 |
+| updatedAt、revision | 实际更新时刻、正安全整数单调版本；采样更新时间不同于事件新发生 |
+| eventState、endedAt、continuity | ACTIVE/ENDED或未确认null；明确过程结束时刻或null；CONFIRMED/UNCONFIRMED |
+| triggerValue、peakValue、peakAt、unit | t或null、对应真实时刻或null、固定t；峰值不默认等于触发值 |
+| peakSource、peakCoverage、hasDataGap | PLC/OBSERVED_SAMPLES或null；COMPLETE/PARTIAL/UNCONFIRMED；观测覆盖说明 |
+| threshold、thresholdKind、configurationVersion | 发生时有效阈值及WARNING/PROTECTION或null，不能从SERIOUS猜阈值类别 |
+| direction、occurredHeight | UP/DOWN/STOP或null，m或null |
+| message | 未确认或缺失说明 |
+
+正式目标不依赖旧state/handling/recoveredAt显示恢复。ENDED只是PLC过程结束，不能表示人工消警；页面没有确认/恢复/处理写接口。内部传感器通道、控制器会话和来源标识必须保留用于归并，页面无需展示这些部件。
+
+峰值可由PLC提供，或后端在PLC已开启的事件窗口增量统计有对应通道依据的有效采样；断联/漏采使覆盖PARTIAL。DOWN只留事件和有限触发/峰值/结束快照，不保存完整下降过程。未确认等级或起止不能凭新数值猜。
+
+### 5.4 独立异常入口
+
+`GET C/events/history`：必填systemCode、startTime/endTime（带时区、右开）；可选recordKind=ALL/NON_ALARM/ALARM（默认ALL）、deviceCode、direction、page/pageSize。返回`{systemCode,list,total,page,pageSize,asOf,filters}`，支持无RUN关联、isAlarm=false的DOWN事件。list为Event摘要：eventCode、alarmCode或null、isAlarm、recordCode或null、对象、方向、真实/观测起点、outcome与说明、hasSnapshots。
+
+`GET C/events/{eventCode}?systemCode=...`返回`{systemCode,event,alarm,snapshots,asOf}`，非告警alarm=null，snapshots仅有真实触发/峰值/恢复/终止/过程结束中的有限阶段点，无连续数组。告警详情也可按alarmCode对应的稳定eventCode读取；后端返回明确映射，不让前端猜。列表AlarmItem补eventCode用于该只读定位。
+
+## 6. 数据归档：两图及后端比较
 
 ### GET C/archive
 
-必填systemCode，按页面条件传winchCode、metric、tensionMetric、period、comparisonType、recordCode。三组日期各自成对、相互独立：
-
-| 范围 | 日期输入（均左闭右开） |
+| Query | 类型/必填 |
 |---|---|
-| 左侧变化图 | changeStartDate、changeEndDate |
-| 右侧当前区间 | currentStartDate、currentEndDate |
-| 右侧参考区间 | referenceStartDate、referenceEndDate |
+| systemCode、winchCode | 实际系统、本机，均必填 |
+| metric | TENSION/SPEED，必填；ALARM当前页面未开放，返回400 UNSUPPORTED_METRIC |
+| tensionMetric | metric=TENSION时必填WINCH_TENSION/TRACTION_ROPE_TENSION，分别本机ropeNo=1/2；SPEED不适用 |
+| period | WEEK/MONTH/QUARTER/YEAR，默认WEEK；不是删除底层日/半年报表 |
+| comparisonType | SELECTED_PERIODS/PREVIOUS_RUN/HISTORY_AVERAGE/PREVIOUS_PERIOD/YEAR_ON_YEAR，默认PREVIOUS_RUN |
+| recordCode | 两种运行比较必填；其余不适用 |
+| changeStartDate/changeEndDate | 左图完整日期区间，必填；右开 |
+| currentStartDate/currentEndDate | 周期比较当前区间，成对；右开 |
+| referenceStartDate/referenceEndDate | SELECTED_PERIODS必填参考区间，其他由后端明确生成；右开 |
+| maxPointsPerSeries、cursor | 第1.3节预算，续读原条件 |
 
-period为DAY/MONTH/QUARTER/HALF_YEAR/YEAR；comparisonType为PREVIOUS_PERIOD/YEAR_OVER_YEAR/CUSTOM。CUSTOM明确三组区间；自动参考区间由后端按日历确定并回显。附件未提供metric/tensionMetric完整前端取值，本轮不猜其编码；实施前核对实际页面枚举，仅接已有明确来源的指标，不以占位值假装支持未知分析。
+本轮不接受附件当前含义混合的compareStart/compareEnd来猜两个区间，缺失独立边界400 RANGE_INCOMPLETE，前端须适配。period只决定图形分组（WEEK/MONTH按日，QUARTER/YEAR按月）；显式自选边界不因切period被暗改。左图与右图分别读取各自区间。
 
-返回`{systemCode,winchCode,metric,tensionMetric,period,comparisonType,changePoints,comparisonCurrent,comparisonPrevious,comparisonAxis,requestedRanges,effectiveRanges,dataRange,asOf,summary,complete,nextCursor,aggregation,notices}`。后端生成axisKey和真实当前/参考位置、中文标签，前端按key显示，不按数组下标拼不同区间。
+返回ArchiveResponse：`{systemCode,winchCode,metric,tensionMetric,period,comparisonType,comparisonTitle,comparisonAxis,historySampleCount,changePoints,comparisonCurrent,comparisonPrevious,requestedRanges,effectiveRanges,referenceRecordCodes,dataRange,asOf,summary,statisticsState,complete,nextCursor,aggregation,notices}`。statisticsState为READY/UPDATING/NOT_BUILT；各参考条件不满足时返回可比性和原因，不伪造0。
 
-summary含currentStatistics、referenceStatistics、absoluteChange、changeRatePercent、comparable、comparisonReason；统计含均值、原始极值、有效数、记录数、完整性及范围。可比且参考非0时变化率为(当前-参考)/参考×100，10表示10%；参考0或数据不足则null并说明，不替换任意小分母。
+ArchivePoint为`{axisKey,label,time,progressPercent,tension,speed,normalAlarms,seriousAlarms}`，各不适用/未知字段null，数值t/m/min；后端准备axisKey和对齐位置，不按数组下标拼不等区间。normalAlarms/seriousAlarms仅有确证事件来源时给，不按拉力重新判警。
 
-DAY/MONTH等仍从持久周期报表和高度桶读取；历史完整月份提前计算。去年同期按相同日历位置及已明确截止，回传实际范围/覆盖，不固定用去年全年，不按365天或30天机械偏移。闰日/不等长月采用有效日历边界并说明；不足以组成同口径结果则comparable=false，必要边界切片由后台准备，不在请求中扫全月/全年原始，不让前端算。
+summary为`{average,maximum,minimum,unit,changeRate,comparable,comparisonReason,currentStatistics,referenceStatistics}`。前三项对应左图请求指标，使用完整范围事实而非缩减图点；changeRate是右图当前/参考均值百分比变化，10表示10%。分母0、样本不足或不具备同口径时null并说明，不用微小分母补比率。
 
-数值按sum/count合并、极值取原始极值、参与记录去重；次数按开始日、测量按采集日、事件按实际/观测日、可靠运动时长跨日拆分。无系统运动区间依据则系统工时null，正常DOWN不能补全程曲线或统计。高度按本机分箱，无高度有效拉力仍参与原始摘要；显示合并桶回显真实粒度，不冒充原始采样。
+PREVIOUS_PERIOD使用当前区间对应上一日历周期；YEAR_ON_YEAR使用同日历位置及明确截止的去年同期，闰日/月长回显实际边界。历史结束月份读取预计算，必要边界切片后台准备；NOT_BUILT不能伪装0，不能每次扫描全年原始。
+
+PREVIOUS_RUN取当前记录之前最近一条已确认完成、同系统本机有参与且同生产UP/来源统计口径的记录；无候选则空态。HISTORY_AVERAGE取当前记录之前、明确参考范围内满足同一条件的集合，回显范围与实际historySampleCount，不默认30条。未传参考范围时默认从当前记录上海开始日零点至当前记录开始时刻，防无限扫描；前端需显示范围。COUNT未知开始/未确认结果不能自动当完整参考记录。
+
+单次比较comparisonAxis=PROGRESS只有存在明确可信的归一化运动依据时可用；当前无已确认机械限位/统一进度来源，不用高度/30或样本序号凑0～100%。否则返回comparisonAxis=null、comparable=false与PROGRESS_MAPPING_NOT_READY，左图已知统计仍可返回。时间周期比较为TIME。未知进度不凭前端图形要求补造，具体归一化规则确认后再实施。
+
+记录次数按开始日，测量按采集日，事件按明确显示起点，可靠运动区间跨日拆分；SYSTEM时长无独立依据null，不能用四机工时和代替。系统历史极值与本机归档指标不同，不混用。
 
 ## 7. 急停与三参数设置
 
@@ -316,7 +348,7 @@ JSON必填systemCode、requestId，可选reason（最长512个Java长度单位�
 
 ### 7.2 GET/PUT C/parameter-settings
 
-GET必填systemCode，返回`{systemCode,savedVersion,savedSettings,appliedVersion,appliedSettings,applyStatus,commandCode,message,asOf}`。settings均为`{startTime,intervalMinutes,speedMPerMinute}`，未知对象null；已保存与已生效不可冒充同一状态。
+GET必填systemCode，返回`{systemCode,startTime,intervalMinutes,speedMPerMinute,savedVersion,savedSettings,appliedVersion,appliedSettings,applyStatus,commandCode,message,asOf}`。settings均为`{startTime,intervalMinutes,speedMPerMinute}`；顶层三项是已确认生效值的页面投影，未知null，不用保存草稿填充。已保存与已生效不可冒充同一状态，编辑并发基准取savedVersion。
 
 PUT必填systemCode、requestId、expectedVersion、startTime、intervalMinutes、speedMPerMinute。三项业务参数不变，编号/版本只服务幂等与并发；expectedVersion取真实savedVersion，无版本则未就绪，不猜0。
 
@@ -335,7 +367,52 @@ PUT必填systemCode、requestId、expectedVersion、startTime、intervalMinutes�
 
 PUT返回参数视图与requestId/commandCode。applyStatus为NOT_READY/SAVED/PENDING_APPLY/WRITE_CONFIRMED/APPLIED/UNCONFIRMED/FAILED。SAVED只说明平台保存，WRITE_CONFIRMED只是写应答；只有确认设备生效才APPLIED并更新appliedSettings。失败保留已存和原生效版本，不假装自动回滚PLC。
 
-当前配置持久化/回读尚未闭环；D105～D108编码未确认，不强配D100～D103，不把D105当HH:mm或D107当速度。阈值不塞三参数，不新增阈值页面或中转时间控制。
+当前配置持久化/回读尚未闭环；D105～D108编码未确认，不强配D100～D103，不把D105当HH:mm或D107当速度。阈值不塞三参数，使用下面独立接口；中转时间控制仍不开放。
+
+### 7.3 PUT C/winch/tension-thresholds
+
+目标请求ThresholdUpdateRequest：systemCode、winchCode、requestId、expectedVersion、thresholds均必填。前两项选择真实本机；requestId规则同急停，同一次操作重试沿用；expectedVersion为detail.thresholdSettings.savedVersion，未准备好409，不以appliedVersion代替。后两技术字段是对新附件的必要补充，当前前端需同步发送。
+
+thresholds恰为该设备两路真实sensorCode，每项alarmThreshold/safetyValue为固定t的有限正数且预警小于保护。归属、权限与必要规则由所属模块检查一次；没有PLC已确认物理上限时不拿1.4t/3t图轴限制输入，也不据新阈值修改事件状态。
+
+```json
+{
+  "systemCode": "QJXT-01",
+  "winchCode": "WJ-02",
+  "requestId": "thresholds-20261025-001",
+  "expectedVersion": "7",
+  "thresholds": [
+    { "sensorCode": "PS-03", "alarmThreshold": 0.8, "safetyValue": 1.2 },
+    { "sensorCode": "PS-04", "alarmThreshold": 0.8, "safetyValue": 1.2 }
+  ]
+}
+```
+
+示例版本和值不表示现场已存在。HTTP202受理或200查询到已确认结果，业务code均200。响应ThresholdApplyResponse为`{systemCode,winchCode,requestId,commandCode,status,savedVersion,configurationVersion,effectiveThresholds,confirmationState,message,demo}`。status为PENDING/APPLIED；configurationVersion仅表示真实已确认生效版本，未知null；demo生产false。
+
+PENDING的effectiveThresholds是上次已确认两路快照或null，confirmationState=LAST_CONFIRMED/UNCONFIRMED，不覆盖草稿为现场事实。APPLIED必须两路完成真实PLC生效确认，confirmationState=CONFIRMED，effectiveThresholds返回实际值（结构同thresholds），不能用写应答或请求值冒充。若部分写入/确认，要在命令结果与message说明，不能把旧快照描述成此刻已验证的完整现场配置。
+
+```json
+{
+  "code": 200,
+  "message": "申请已受理，尚未确认PLC生效",
+  "data": {
+    "systemCode": "QJXT-01",
+    "winchCode": "WJ-02",
+    "requestId": "thresholds-20261025-001",
+    "commandCode": "CMD-EXAMPLE-001",
+    "status": "PENDING",
+    "savedVersion": "8",
+    "configurationVersion": null,
+    "effectiveThresholds": null,
+    "confirmationState": "UNCONFIRMED",
+    "message": "此示例没有旧确认快照，不能用申请值填充",
+    "demo": false
+  }
+}
+```
+
+明确拒绝/失败用400/403/409/429/503及真实errorCode；已受理后失败通过commands回执与detail.thresholdSettings.applyStatus查询，不能永远假报等待成功。阈值具体地址、单位、倍率、两路回读协议未确认时503 THRESHOLD_MAPPING_NOT_READY，不预设寄存器、不虚构APPLIED。PENDING后重新读取detail或按commandCode查询，不在前端修改工况或告警。
 
 ## 8. 导出记录与文件
 
@@ -362,24 +439,31 @@ files项：fileCode、fileName、mediaType、sizeBytes、dataRows、rowKind、do
 
 ## 9. 登录、只读用户与占位页面
 
-login输入username/password，返回token、refreshToken、expiresIn、expiresInUnit=MILLISECONDS，明确沿用当前毫秒不悄改秒。refresh输入refreshToken，返回新token；只有实际实施轮换才返回新refreshToken，当前未轮换不宣称已做。
+| 方法 | 请求 | 目标返回 |
+|---|---|---|
+| POST /api/auth/login | JSON username、password，均必填 | {token,refreshToken,expiresIn,expiresInUnit:"SECONDS"} |
+| POST /api/auth/refresh | JSON refreshToken，必填 | {token,refreshToken或null,expiresIn,expiresInUnit:"SECONDS"} |
+| GET /api/auth/user-info | Bearer真实账号 | {id,username,nickname,avatar,email,phone,roles,roleNames,permissions,systems,currentSystemCode} |
+| POST /api/auth/logout | Bearer当前身份，无业务body | data=null，message说明真实退出范围 |
 
-user-info目标含id、username、nickname、avatar、email、phone、roles、permissions、systems、currentSystemCode；systems为授权`{systemCode,systemName}`列表，currentSystemCode为有效选择或null。单系统也由后端配置提供；可空资料null、角色显示名称由后端返回。
+目标expiresIn为新访问令牌的有效秒数，正整数；当前Java login返回毫秒、refresh只有token，需要实际适配，不能只在文档写秒。刷新时检查真实账号状态；只有实施轮换才返回新refreshToken，否则null让前端保留原有效刷新凭据。不宣称当前logout已撤销所有JWT，真实会话撤销机制仍待实施。会话到期与采集数据时间校验没有关系。
 
-logout返回真实处理范围和message，当前仅清请求上下文、没有JWT服务端撤销，不能宣称旧令牌全部失效。当前auth和用户管理权限缺口见[现有接口](current-api-reference.md)，保护实施完成后再开放目标页面。
+user-info.roles为实际编码数组、roleNames为{code,name}数组，systems为授权{systemCode,systemName}；未知资料null，用户ID公开string（当前前端number类型需兼容），实际currentSystemCode或null，不硬编码QJXT-01。未认证/禁用/无权分别401/403，不继续沿用当前fallback permitAll。
 
-`GET /api/users`：keyword可选，page默认1、pageSize默认10最大100。后端按账号/姓名/角色名称或编码搜索，创建时间倒序、用户ID第二排序，返回`{list,total,page,pageSize,asOf}`。list项为`{id,username,realName,roleCode,roleName,status,statusText,phone,email,createTime}`，ID字符串、时间带时区、缺值null，不返回密码/哈希。需登录且user:read，不沿用旧fallback permitAll。
+`GET /api/users`：keyword可选去空白；page默认1、pageSize默认10最大100。需user:read；后端按账号/姓名/角色名称或编码筛选，创建时间倒序、用户ID倒序稳定分页。返回`{list,total,page,pageSize,asOf}`，行：`{id,username,nickname,roles,roleNames,lastLoginAt,lastLoginState,createdAt}`。
 
-页面只读，不新增用户创建/编辑/删除入口。模型管理、历史巡检、数据分析保留待开放，视频范围外。
+lastLoginState=KNOWN/NEVER/UNKNOWN：只有确证从未登录才NEVER；历史未采集时UNKNOWN且lastLoginAt=null，不能显示“从未登录”。当前前端把null当从未登录，必须同步消费该状态；当前数据库没有该事实来源则如实UNKNOWN。用户资料不返回密码/哈希，不因页面有roles就宣称菜单授权已经完成。
+
+页面只读，不新增创建/编辑/删除/重置密码入口。模型管理、历史巡检、数据分析仍待开放，视频范围外。旧管理员CRUD留在[当前接口参考](current-api-reference.md)，不作为本期用户页调用。
 
 ## 10. 错误与页面调用顺序
 
-目标错误为`{code,message,data:{errorCode,...必要公开信息}}`，无业务对象时data=null。安全过滤器401现状仍可能无体，前端兼容。旧命令HTTP200＋REJECTED等以现有接口参考为准，此处不声称已修改。
+目标错误为`{code,message,data:{errorCode,...必要公开信息}}`；成功无业务对象时data=null。安全过滤器401现状仍可能无体，前端兼容。旧命令HTTP200＋REJECTED等以现有接口参考为准，此处不声称已修改。
 
 | HTTP | 场景 |
 |---|---|
 | 200 | 查询成功；空态/真实缺值/统计准备情况用结构说明 |
-| 202 | 命令或导出已受理，不代表已停止/生效/生成文件 |
+| 202 | 命令或导出已受理，业务code仍为200，data给真实阶段，不代表已停止/生效/生成文件 |
 | 400 | 必要字段、范围、预算不合法，不是采样时间早晚错误 |
 | 401/403 | 未认证/无权限或任务归属不符 |
 | 404 | 系统、设备、记录、点、事件、任务/文件不存在或归属不符 |
@@ -405,11 +489,12 @@ logout返回真实处理范围和message，当前仅清请求上下文、没有J
 | 单机详情 | 主动winch/detail，不跟随SSE |
 | 对比图 | 统一trend按comparisonView查询；图例选择现有来源，cursor继续批次 |
 | 历史 | list摘要/独立日期目录→detail有界概览→局部/cursor/point |
-| 告警 | alarm-dashboard筛选；alarmCode/eventCode定位详情 |
+| 告警 | latest共享快照/hasAttention，history独立条件分页，事件详情只读 |
+| 阈值 | detail取得真实版本→提交两路阈值→PENDING保留旧确认值/APPLIED采用返回确认值 |
 | 归档 | 提交完整三组区间→后端两图、对齐轴、汇总，不在前端算同比 |
 | 操作 | 真实账号提交→显示阶段→命令读取/重新查询；设备态仍按采集 |
 | 导出 | 创建任务→查询状态/列表→完整发布后下载 |
 
-前端可做必填/数字/查询起止提示、日期单位格式化、固定样式和加载/网络/空态提醒。状态、配对总力、统计、同比、历史结果、告警恢复和处理要求由后端返回；缺少说明时只用通用失败提示，不造业务原因。
+前端可做必填/数字/查询起止提示、日期单位格式化、固定样式和加载/网络/空态提醒。状态来自明确PLC事实，配对总力、统计、同比、历史结果、事件过程由后端整理返回；缺少说明时只用通用失败提示，不造业务原因。
 
 本轮仅文档。当前Java、PLC模板和七表基线未迁移；完整规则见[业务总览](business-flow-and-page-data-overview.md)、[数据库设计](database/page-driven-database-design.md)、[职责对齐](frontend-backend-contract-alignment.md)。

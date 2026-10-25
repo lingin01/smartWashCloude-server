@@ -1,12 +1,12 @@
 # 从页面字段倒推的数据库设计
 
-日期：2026-10-25。已结合《前后端职责与页面接口修订说明_20261024》和新增《当前项目总结与详情拉力对比图数据处理说明_20261024》更新。本文是方案，不是已执行的建表或迁移；当前数据库仍为7表基线。
+修订日期：2026-10-25。依据本轮两份新附件的全部页面修订及PLC告警事件规则更新；同名20261024文件已有新版正文，不能沿用旧右侧统计双表。本文是方案，不是已执行的建表或迁移；当前数据库仍为7表基线。
 
 新版点位、M50急停和历史保存规则见[新版统一方案](../unified-plc-business-and-data-plan.md)；新页面职责、公共编号、单位和接口修订见[前后端对接修订](../frontend-backend-contract-alignment.md)。本文提供目标十表、字段、索引及页面查询设计，不把当前旧接口行为当成新的页面契约。
 
-本次图表的分组、统一采样键、曲线统计与原始统计定义见[详情拉力对比处理方案](../detail-force-comparison-processing.md)，附件现状见[原文](../reference/detail-force-comparison-report-20261024.md)。
+本次图表范围见[详情拉力对比处理方案](../detail-force-comparison-processing.md)，告警及阈值闭环见[PLC告警与阈值处理](../plc-alarm-and-threshold-processing.md)；依据保留为[全部页面新报告](../reference/frontend-pages-report-20261025.md)和[PLC红字修订原文](../reference/plc-alarm-revision-20261025.md)。
 
-依据：上述两份修订说明、此前页面字段说明、当前后端代码，以及[实时、上行历史与详情口径](../realtime-upward-history-and-detail-plan.md)。新增附件报告前端仍在配对求和、取点和计算统计；本仓库没有该前端源码可独立核验，不将附件中的演示值、51/601点或测试结果当现场数据与后端验收。
+依据：上述两份新报告、当前后端代码及[实时、上行历史与详情口径](../realtime-upward-history-and-detail-plan.md)。前端报告已改成逐点表，动力页仍有本地SUM，历史页仅三类来源；本仓库未独立核验前端测试或PLC联调，不把模拟上下行、51/601点及测试数量当生产保存要求。
 
 边界：单PLC、四机八索；上行保存核心过程采样，正常下行不保存连续测量，下行异常保存事件点及必要快照；没有数据过期判断。现阶段RUN页面建议采用上行单程，不称为完整清洗轮次。
 
@@ -25,7 +25,7 @@
 
 首页、单台详情和历史详情读取同一份事实，不各存一套重复运行数据。正常下行仍可实时查看，但不能提供未保存的完整历史曲线、原始导出或全程峰值。
 
-新增附件的模拟平均包含上下行及回退；正式统计继续只取PRODUCTION_UP，其他UP用途留原始、正常DOWN不补存。图表的“全部次数”是多组叠加展示，右侧取点与统计属于当前unit，不能按全日所有组重新计算。默认分组defaultUnitId由后端查询结果确定，不为页面默认选择增加数据库状态表。
+最新两种图均以所选曲线的逐点表替代旧统计双表。历史图只选择ROPE1/ROPE2/SERVO，动力页保留两索合计需求；sampleKey作为后端稳定关联目标保留。statistics、rawStatistics、ropeExtrema、defaultUnitId不再为这些页面强制返回，但运行摘要、周期统计和高度桶继续服务列表概况、归档与导出。正式统计仍只取PRODUCTION_UP，其他UP用途留原始、正常DOWN不补存；逐点表通过有界续读最终取得选中曲线全部已存点，不用抽样结果冒充完整表。
 
 正式页面由`/api/command-center/...`按`systemCode`查询，具体契约见[对外接口说明](../external-api-contract.md)。当前`/api/cleaning/devices/{deviceId}`仍是已实现代码的设备接口，不继续作为新页面历史设计的另一套入口。
 
@@ -73,7 +73,7 @@ erDiagram
 - 新运行建议使用紧凑的`BIGINT UNSIGNED`内部主键及唯一公开`record_code`。页面`id/recordCode`用公开编号，采样关联内部键，避免每帧重复长编号。
 - 采样内部自增ID只用于数据库定位；重放去重使用稳定的`device_id + capture_id + sample_seq`，采集实例跨重启不复用，重放沿用原标识。
 - 库内统一kg、m、m/min；电机存公式对应的等效kg及必要原值，不标成N·m。新页面接口由后端输出t；前端切换kg时按明确单位格式化，不能把已为t的数值再除1000。当前旧设备接口输出kg属于代码现状，不能混入新契约。
-- 时刻用`DATETIME(3)`保存UTC，应用与连接显式使用UTC；业务`DATE`按`Asia/Shanghai`计算。`DATETIME`类型本身不保存时区。查询使用开始包含、结束不包含。
+- 时刻用`DATETIME(3)`保存UTC，应用与连接显式使用UTC；业务`DATE`按`Asia/Shanghai`计算。`DATETIME`类型本身不保存时区。数据库查询内部左闭右开；新告警历史CUSTOM页面输入首尾日期包含，服务端转换为开始日零点至结束日次日零点，不能把同名endDate直接当排除日。
 - 不校验采集时间的早晚、年龄或与当前时钟的偏差，不因缓冲延迟、跨日或早于上一帧而拒收/丢弃。时间列只用于记录、查询、曲线位置、历时和日历统计；唯一采样标识负责去重，不以时间作数据有效性条件。
 - 数据库可空字段保存NULL，新页面声明的可空字段保留键并明确返回JSON null，不能沿用当前NON_NULL序列化的省略行为。正常下行未归档、传感器无效和配置未取得分别说明；有效0保留。下面数值类型为建议存储精度，不代表现场精度或机械范围。
 - 页面五态的待机名称统一为`IDLE`；当前代码`STANDBY`需要在实施中适配。数据表保留PLC原始状态及业务规则来源，不能将修改页面枚举理解为改写PLC码或以时间推断离线。
@@ -85,7 +85,7 @@ erDiagram
 | 表 | 保留字段 | 建议补充的页面配置 |
 |---|---|---|
 | `cleaning_system` | `system_id、device_id、tank_id、ring_id、ring_own_weight_kg` | `system_code、system_name、configured_height_m、height_limit_min_m、height_limit_max_m`及下述参数版本/快照 |
-| `cleaning_winch` | `winch_id、system_id、slot_no` | `winch_code、winch_name、last_maintenance_at` |
+| `cleaning_winch` | `winch_id、system_id、slot_no` | `winch_code、winch_name、last_maintenance_at`及两路阈值保存/生效快照 |
 | `cleaning_rope_sensor` | `rope_id、winch_id、slot_no、tension_sensor_id` | `sensor_code、sensor_name、business_role、installation_position、warning_threshold_kg、protection_threshold_kg、threshold_version、threshold_rule_snapshot` |
 
 名称/编号用VARCHAR；高度建议DECIMAL(10,3)，拉力DECIMAL(14,4)，速度DECIMAL(10,4)，维护时间DATETIME(3)。`system_code`唯一；`(system_id, winch_code)`唯一；`sensor_code`唯一并通过钢绳位置关联本机。公共编号选定后保持稳定，名称变化不改变内部关联。
@@ -94,11 +94,11 @@ erDiagram
 
 `rated_load_kg、rated_speed_mpm、monitor_min_kg、monitor_max_kg`不再作为本次页面要求新增的列；这不授权删除已有数据库扩展列或历史数据。预警/保护各自使用明确配置及规则，缺少配置保存NULL，不填27m、30m、1.4t等显示/示例值。
 
-阈值版本及有限规则快照记录实际比较含义、适用对象和已确认生效范围，不能仅凭字段名补出未知上下限算法。清洗模块根据配置与PLC事实返回传感器最终状态、中文说明和缺失原因；配置不全时不能以0阈值或“没有配置”等同正常。若无依据判断状态，应明确未确认，不影响其他真实有效测量的保存。
+阈值版本及有限规则快照记录PLC实际使用的参数、适用对象及生效证据。拉力状态和普通/严重事件由PLC判断，后端不比较每笔拉力与数据库阈值新建故障；清洗模块解释已确认PLC状态，缺少信号语义则明确未确认。修改参数、保存阈值或普通读数变化不产生事件，也不直接改写设备工况。
 
 页面目前只有最近维护时间，先不增加维护工单体系；需要维护历史再扩展。单机独立限位有明确需求和配置时再增加，不复制系统限位冒充本机实测。
 
-PLC连接地址与轮询参数继续按现有接入配置管理。页面阈值不代表已经支持写PLC保护参数，也不因此开放新控制接口。
+PLC连接地址与轮询参数继续按现有接入配置管理。最新页面新增阈值修改目标，但真实写入点位、类型、倍率及生效回执仍待确认；不把新增接口声明当作现场可用能力。
 
 ### 4.1 三参数的保存与生效
 
@@ -116,6 +116,14 @@ PLC连接地址与轮询参数继续按现有接入配置管理。页面阈值�
 
 尚未明确D100～D103、D105～D108的编码和读回关系，本轮不填映射，也不宣称这些参数已经联通。未来确认生效需要数据库快照和设备反馈共同闭环；当前仅内存设置视图不满足本设计。保存时刻、确认时刻只记录配置事实，不增加采集数据时间校验。
 
+### 4.2 两路阈值的保存与生效
+
+目标`PUT /api/command-center/winch/tension-thresholds`按真实systemCode、winchCode及两路sensorCode提交alarmThreshold/safetyValue，输入固定t，后端统一换kg存储。只做所属关系、两路完整不重复、有限正数、预警小于保护和已确认现场范围等必要检查；不把图形1.4t/3t当安全上限。
+
+在`cleaning_winch`增加有限两路快照：`threshold_saved_version/snapshot/at`、`threshold_applied_version/snapshot/at`、`threshold_apply_state`及关联命令/确认依据。`cleaning_rope_sensor.warning_threshold_kg/protection_threshold_kg/threshold_version`仅代表已确认生效值。PENDING只保存申请，不覆盖旧有效视图；PLC两路完整生效确认后，按同一真实配置版本在短事务中更新本机applied快照及两路有效列。部分写入、只收到通信写应答或身份不符都不能APPLIED；保留真实未确认/失败原因。
+
+保存与生效版本服务并发保护和追溯，不能由浏览器localStorage或默认数值伪造。生效协议未确认时不实现猜测下发，也不虚报成功；事件触发时另保存当时适用阈值，之后改参数不回写旧事件。本设计复用现有拓扑表，不为弹窗新增一套历史业务表。
+
 ## 5. 运行主表：直接支撑列表与七个概况
 
 ### `cleaning_run_record`
@@ -131,14 +139,14 @@ PLC连接地址与轮询参数继续按现有接入配置管理。页面阈值�
 | `state / result / termination_reason` | VARCHAR业务枚举 | 是否结束、是否确认完成、真实退出原因分开；清洗模块负责最终判定 |
 | `start_method` | VARCHAR(24)，可空 | 有实际来源才填，不从AUTO推定定时 |
 | `operator_user_id` | BIGINT，可空 | 可验证后台操作账号，现场动作不套用在线用户 |
-| `rope_min_kg / rope_max_kg` | DECIMAL(14,4)，可空 | 本次PRODUCTION_UP有效钢绳极值，不含回退/检修、电机、总拉力、下行快照 |
+| `rope_min_kg / rope_max_kg` | DECIMAL(14,4)，可空 | 本次PRODUCTION_UP全系统8路单绳有效采样集合的单个极值，不含回退/检修、电机、合计或下行快照 |
 | `abnormal_count / has_data_gap` | BIGINT UNSIGNED / BOOLEAN | 属于本次的异常数、已知数据缺口，不是过期判断 |
 | `parameter_snapshot / identity_snapshot` | 有限JSON对象 | 开始时已确认的参数值/生效版本、作用范围；当时公共编码/名称与内部身份映射、单位/换算规则版本 |
 | `result_rule_version / result_snapshot` | VARCHAR / 有限JSON，可空 | 形成结果的实际规则版本和依据；必要的历史说明保留来源，不拿当前状态重算旧结果 |
 
 本版`kind=RUN、recordScope=LEG、directionScope=UP`由接口约定输出，不必每行重复常量。一次系统同步上行是一条系统记录，四台参与不变成四次系统运行。
 
-`durationSeconds`由已知起止相减，格式化时长不入库；有效运动时长另读分日摘要。列表常用极值和异常数存派生摘要，避免每页十条都读取十份原始曲线。
+`durationSeconds`由已知起止相减，格式化时长不入库；有效运动时长另读分日摘要。列表常用极值和异常数存派生摘要，避免每页十条都读取十份原始曲线。entry.maxTension/minTension始终是本记录全系统8条单绳集合的极值，不随当前winchCode、图例或鼠标变化，不将8路相加；缺通道/观测缺口保留覆盖说明，不能声称缺失部分也已观测。
 
 后端返回`runResultText、endReasonText、startMethodText`及本次设定速度、间隔等直接展示字段；文本根据保存的结论码、规则版本及历史快照生成，前端不从事件数组推测结果。无来源的启动方式或参数显式返回null及说明；不以当前已修改参数补写旧记录，不为历史处理次数制造0或五次。
 
@@ -206,45 +214,52 @@ PLC连接地址与轮询参数继续按现有接入配置管理。页面阈值�
 
 高度缺失但拉力有效时，仍可参加记录拉力极值，却不能成为高度曲线点，因此一般测量数量与`curve_*_count`分开。未归属记录的原始上行采样保留，不自动混入生产计数/均值。
 
-COUNT的series.statistics使用完整本机PRODUCTION_UP曲线集合，metricBasis=RAW_CURVE_SAMPLES，合并curve_*的和、数量及极值。series.rawStatistics使用原始rope1/rope2/motor/pair摘要，metricBasis=RAW_VALID_SAMPLES，保留缺高度但拉力有效的测量。两者均不随图表分页、图例选择或降采样改变。unit.ropeExtrema取两条单绳曲线集合的最大/最小，不含ROPE_TOTAL和SERVO；总拉力极值来自逐点配对合计后的pair集合，不能将单绳各自最大或最小相加。
+curve_*保留完整可画PRODUCTION_UP曲线统计，原始rope1/rope2/motor/pair摘要保留缺高度有效测量，两种集合不能混用。新版页面已删除右侧均值/极值双表，不再强制输出series.statistics/rawStatistics或unit.ropeExtrema；这些摘要继续供运行头、归档和明确报表使用，不随图例、分页或降采样改值。总力极值来自逐点有效配对后的pair集合，不能将单绳各自极值相加。
 
 本机今日次数按主表开始日及参与关系去重；不能因四台同步或跨日行数增加系统次数。某来源参与周期曲线的记录数，在目标采集日期内对`curve_*_count>0`的记录去重并预计算；一条运行跨两天，不能把两天各1条相加当月2条。
 
-## 8. 异常事件表：下行仅在这里留事件点
+## 8. 异常事件表：一次持续过程一行
 
 ### `cleaning_exception_event`
 
 | 字段 | 规则 |
 |---|---|
-| `id / event_code` | 内部主键、唯一稳定公开事件编号，支持重放去重 |
-| `system_id / device_id` | 系统、PLC来源 |
-| `winch_id / rope_id / sensor_id / record_id` | 可空；定位真实动力设备、钢绳位置或触发传感器及可靠运行关联，系统事件不强填某一台 |
-| `target_type / target_snapshot` | SYSTEM/WINCH/SENSOR等已明确对象类型及有限身份/名称快照；多对象事件快照记录相关对象，不复制成四起本机故障 |
-| `source_kind / is_alarm` | 来源为PLC事实或已确定的后端规则；是否进入告警页面由业务规则明确，不把所有技术记录自动称告警 |
-| `direction / fault_code / reason` | 实际方向、故障码/原因，不从曲线峰值推断 |
-| `occurred_at / occurred_at_source` | 可空的真实发生时刻及事实来源；只有首次观测时不冒充实际发生，未知保存NULL |
-| `first_observed_at / recovered_at / terminated_at` | 已观测触发、恢复、终止时刻；没有依据为空 |
-| `outcome` | 真实恢复/退出事实，允许未确认 |
-| `alarm_state / archived_at` | 告警是否确认恢复与归档时间分别保存；事件终止、已归档均不能自动证明恢复 |
-| `category / severity / threshold_kind` | 已确定规则提供的类别、级别、阈值类别；无来源允许空，不根据中文关键词补猜 |
-| `trigger_value_kg / threshold_kg / threshold_version / threshold_snapshot` | 触发读数、当时适用阈值、版本及有限配置/生效范围快照；非拉力告警无相应值时为空 |
-| `rule_version / explanation_snapshot` | 形成类别/级别/状态结论的规则版本及必要说明来源；支持categoryText、levelText、stateText、handlingText、thresholdKindText的后端输出 |
-| `trigger_snapshot / recovery_snapshot / termination_snapshot` | 有限JSON，仅事件点的高度、拉力、速度、电机、质量，不放连续采样数组 |
-| `operator_user_id` | 仅有可验证后台操作时填写 |
+| `id / event_code` | 内部主键、唯一稳定公开编号；告警alarmCode映射此编号，持续、升级、结束不换号 |
+| `system_id / device_id` | 系统及PLC来源，公开deviceCode展示实际动力设备/现场设备，不当内部PLC键 |
+| `winch_id / rope_id / sensor_id / record_id` | 可空；内部通道区分同时发生的不同过程；record_id仅真实已确认关联，不能因换轮自动换事件号 |
+| `controller_session_id / plc_event_id / source_key` | 已确认的控制器会话、PLC过程编号或通道/错误类型身份；保留真实原值，没有来源不猜 |
+| `source_kind / is_alarm` | PLC信号或已确认连接监测的PLATFORM事件；不根据拉力比较阈值自行产生事件 |
+| `target_type / target_snapshot` | 真实对象及触发时身份/名称；页面只显示所属设备，内部仍保留通道定位 |
+| `direction / occurred_height_m / fault_code / content` | 发生方向、高度及PLC错误原文，不从颜色/阈值改写错误 |
+| `occurred_at / occurred_at_source / first_observed_at` | 真实开始与首次观测分开；真实时刻未知时保留NULL和来源说明 |
+| `updated_at / revision` | 后端接受的事件更新时刻与递增版本；重复上报不增加事件数量，不以轮询次数伪造版本 |
+| `event_state / ended_at` | ACTIVE/ENDED及明确现场过程结束时刻；断联、页面关闭、归档或换轮均不等于结束 |
+| `continuity / source_update_snapshot` | 连续性/缺口说明及有限原始信号依据；无可靠结束信号时保持未确认，不编造已结束 |
+| `severity / threshold_kind` | PLC明确提供的NORMAL/SERIOUS及阈值类别；等级当前值或过程最高值的现场语义需确认，不根据拉力推算 |
+| `trigger_value_kg / peak_value_kg / peak_at / peak_source / peak_coverage` | 触发值、已知过程峰值/时刻、PLC提供或观测统计来源及覆盖；无峰值依据不以触发值补造 |
+| `threshold_kg / threshold_version / threshold_snapshot` | 当时适用阈值及配置/生效证据；后续设置不覆盖历史 |
+| `rule_version / explanation_snapshot` | 事件身份/信号解释规则及必要事实说明，不再生成当前页面未显示的人工处理流程 |
+| `trigger_snapshot / end_snapshot / peak_snapshot` | 有限必要事件点，高度/速度/两索/电机/质量；不保存连续DOWN窗口 |
+| `recovered_at / terminated_at / outcome / archived_at` | 若旧业务已有真实事实可保留审计；不替代event_state/ended_at，不表示当前新增处理/恢复按钮 |
+| `operator_user_id` | 仅可验证后台动作存在时填写，PLC自行上报不套用在线浏览账号 |
 
-无PLC准确发生时间时occurred_at为NULL并说明首次观测，不冒充精确物理发生时刻。查询与事件日期统计使用已确认occurred_at，否则使用first_observed_at；同一规则用于列表、周期和导出，不校验采样时间新旧。通信失败没有测量时快照可空，不造全0。
+一次过程首次开始分配稳定event_code，持续和普通升级严重更新同一行及revision，PLC明确结束只更新event_state/ended_at，后续新过程才创建新号。等级降回普通是否同一过程及level表示当前还是最高等级仍按现场明确语义，不由数值猜测。每次写入连同重放标识/待重算标记提交，重放不重复计数。
 
-同一异常持续十秒仍是一条事件，恢复后再次出现才新建。下行事件可没有上行record_id，系统异常入口按设备/时间仍可查询；结束后的独立下行事件不反向改写上行结果。
+PLC有稳定过程号时按系统、控制器会话和PLC编号命名空间去重；没有时由可靠开始/变化/结束信号形成可持久恢复的源过程关联。不能只用deviceCode合并同机两路事件，也不能把后端重启/PLC编号复用当原过程延续。已确认唯一来源键才建立对应唯一约束；可空字段组合不能冒充完整去重机制。未知过程协议明确记录待接，不用新增数据库表掩盖缺失信号。
 
-该表同时支撑新的告警中心，`alarmCode`可以映射同一稳定event_code，不再增加另一份通用`t_alarm`或复制一套告警事实。只有`is_alarm=true`的数据进入告警计数；业务异常事件数、告警数和处理尝试数分别命名。无已确认告警规则时不补分类、严重等级或自动保护算法。
+跨轮持续事件不换alarmCode，record_id只保存已确认主归属；多运行关联规则未定时不强挂最近一条，也不在有限JSON中累积无限轮次。下行事件可以没有record_id，仍独立保存查询；持续过程不能因运行结束反向伪造告警结束或恢复。
 
-单个传感器故障关联该sensor_id及当时对象快照，不因此宣称本机电机故障；系统共享急停的影响作为已确认业务原因展示，仍保留各机原码。传感器更换后，旧事件的名称、阈值和传感器身份继续读触发快照，不用当前绑定覆盖。
+无PLC准确开始时刻时occurred_at保留NULL，first_observed_at保存真实观测。页面occurredAt使用实际/首次观测对应的显示时刻，明确timeBasis=ACTUAL/FIRST_OBSERVED；actualOccurredAt单独保留可空真实时刻。查询日期、排序和导出用同一说明口径，不把观测时刻称为精确物理发生，也不校验采样年龄或先后。
 
-`activeCount`统计本系统全部历史中已经触发、尚未确认恢复的告警，包含恢复未确认部分；另给`recoveryUnconfirmedCount`说明不确定范围。`seriousActiveCount`只计算其中已有明确严重级别的部分，等级未知不猜严重。当前未恢复列表同样不被TODAY/7D历史日期条件截掉；历史视图才按实际事件日期筛选。
+持续更新不能把起点改成最新采样时间。后续补得明确真实发生时刻时，可作为同号事实修订补齐actualOccurredAt及timeBasis，推进revision并重建受影响日期统计；不创建第二条事件，不把更正解释为再次发生。
 
-`todayCount`按今日实际发生/首次观测统计，`todayRecoveredCount`按今日明确恢复统计，后者可以包含此前发生的告警。统计卡片固定全系统口径并回传，列表可另按设备、传感器、类别和历史范围筛选；前端不能把当前页total当全系统未恢复数。列表和统计由后端读取同一查询快照，返回asOf；这不是改变采集时间或判数据过期。
+峰值可直接来自PLC，或在PLC已开启的事件过程中增量整理对应有效采样。该计算不重新判断是否故障。DOWN过程仍不连续落采样库，只更新事件峰值标量及有限峰值点；存在断联、首次观测较晚或缺通道时标观测覆盖不完整，不声称掌握整个下降全程峰值。原有UP原始保存和事件峰值统计分别去重，质量无效不补0。
 
-不建无来源的处理次数或五次尝试明细。D3=50留实际故障含义，不自行补出五次过程；真实急停/中断退出也不要求先凑五次失败。
+告警查询改为`/api/command-center/alarms/latest`及`/api/command-center/alarms/history`，不再将alarm-dashboard、旧统计卡或处理结果作为新页面要求。latest读取所有持续/结束未确认事件及明确近期窗口内已结束事件，跨日持续项不能被TODAY裁掉；hasAttention由后端按已确认PLC/连接事件给出，进入页面不清除。历史先按上海发生日期、等级、设备筛选再分页，total按稳定事件编号计数，升级/结束不增加条数。CUSTOM首尾日期包含，数据库内部转换右开区间，实际窗口回显。
+
+recent完整集合与历史页互不补入。latest的近期展示窗口只决定列表成员，不删除永久事件；若完整集合超响应预算，应明确未能提供完整快照而不能静默截断。非告警技术事件保留is_alarm=false，不强改为普通告警；无RUN关联异常仍可通过`/api/command-center/events/history`查询、`/api/command-center/events/{eventCode}`查看详情或导出追溯，不因移除alarm-dashboard失去入口。
+
+当前页面只普通/严重及所属设备，没有类型、内部部件或人工确认/处理/恢复操作。旧activeCount/todayRecoveredCount等不再强制输出，也不为删除的卡片增加统计列。事件次数、保护异常次数和无来源处理尝试数分别保留含义；D3=50不证明五次过程明细，未知不补写。
 
 ## 9. 周期统计表：报表、计数、日期目录
 
@@ -262,7 +277,7 @@ COUNT的series.statistics使用完整本机PRODUCTION_UP曲线集合，metricBas
 | `up_event_count / down_event_count / stopped_event_count / unknown_direction_event_count` | 按已确认发生/首次观测日期统计，与记录计数分开；已知停止和未知方向分别留存 |
 | `motion_duration_ms` | 落在本周期内的可靠上行运动区间合计 |
 | `rope_min_kg / rope_max_kg` | 本周期采集日期内有效上行钢绳极值 |
-| `rope1_* / rope2_* / motor_* / pair_*` | WINCH范围各来源sum_kg、valid_count、min_kg、max_kg等可合并统计，提前供页面statistics及归档比较使用；不从曲线缩减点反推 |
+| `rope1_* / rope2_* / motor_* / pair_*` | WINCH范围各来源sum_kg、valid_count、min_kg、max_kg等可合并统计，供运行摘要与归档比较使用；不从曲线缩减点反推 |
 | `curve_any_record_count / curve_rope1_record_count / curve_rope2_record_count / curve_motor_record_count / curve_pair_record_count` | WINCH范围曲线组及各来源参与本期曲线的去重记录数；组数量按来源并集去重，不相加各来源数 |
 | `data_from / data_through / has_data_gap` | 已纳入的数据范围与已知缺口，不用于过期判断 |
 | `rule_version、rule_snapshot、computed_version、requested_version、needs_rebuild、built_at` | 规则版本与有限规则快照、计算版本及持久重算标记 |
@@ -305,11 +320,11 @@ COUNT的series.statistics使用完整本机PRODUCTION_UP曲线集合，metricBas
 
 周期曲线按逻辑钢绳位置/电机角色聚合；更换传感器时，不能用当前sensorId冒充整个历史的物理来源，具体原始身份从记录/采样快照追溯。
 
-`points[].sampleCount`来自桶内该来源的有效数量；unit.includedRunCount来自`curve_any_record_count`，unit.sourceIncludedRunCounts分别映射各来源去重记录数。目标页面不再用units.sampleCount表示运行数，也不并列保留旧recordCount别名。统一对比一次准备四来源及统计，前端切换图例只选择已返回结果，不相加各来源次数或重算并集。
+高度桶sampleCount是该来源有效样本数，参与运行数必须按记录去重，不能作平均权重。内部继续维护曲线来源参与数量及并集，页面不因旧DTO名称而同时输出多套计数。
 
-PERIOD的series.statistics明确metricBasis=HEIGHT_BUCKET_MEANS：averageTension为完整基础高度桶的sum之和/count之和，validSampleCount为相应有效原始样本数，maxTension/minTension为这些非空基础桶均值的最高/最低。series.rawStatistics另从周期原始摘要返回metricBasis=RAW_VALID_SAMPLES及瞬时原始极值，含缺高度有效测量，不拿桶内min/max冒充“最高/最低平均”。ROPE_TOTAL的桶独立累积共同有效配对集合，不将两个独立单绳均值直接相加。
+周期报表需要均值时，从完整基础桶sum合计/count合计得到；“最高/最低平均”取基础桶均值极值，原始瞬时极值从原始周期摘要取得，缺高度有效测量仍进入原始摘要。ROPE_TOTAL只聚合共同有效配对集合。图形缩减、显示合桶和分页不改变已定义的统计结果。
 
-基础高度规则版本固定，右侧统计和unit.ropeExtrema依据完整基础桶集合；PERIOD的ropeExtrema取两条单绳基础桶均值集合的极值并标明同一metricBasis，不含总力/伺服。为显示预算合并桶、分批加载或减少曲线点，不改变这些统计。后端可直接在已预计算基础桶上聚合均值极值，无需新增业务表，也不扫描全年原始帧。平均点sampleKey由unit、本机、规则/计算版本及桶定位关联，sampleFrameId/time为null，不能当作一个现场采样。
+新版逐点表不强制返回statistics/rawStatistics/ropeExtrema/defaultUnitId，但删除展示不等于删除预计算与数据能力。基础高度桶仍持久保存供动力平均图、归档和导出，后端无需重扫全年原始帧。平均点sampleKey由周期、本机、规则/计算版本及桶定位关联，sampleFrameId/time为null，不冒充现场帧。
 
 无样本高度为空，不按数组下标拼同高度，不造0线；平均点标为统计坐标，不能冒充真实采样时间/高度。
 
@@ -333,15 +348,16 @@ PERIOD的series.statistics明确metricBasis=HEIGHT_BUCKET_MEANS：averageTension
 | 历史`entries / total` | 运行主表分页/条件计数 | 每页10条，按一次生产上行；不含无限原始曲线数组 |
 | `availableDates / dataRange` | 真实记录日期目录或轻量主记录索引 | includeAvailableDates时返回全系统真实可查询日期，不受当前页/当前日期筛选截断；未确认边界单独说明 |
 | 单次entry及结果中文、设定速度/间隔 | 主表＋历史参数/身份/结果快照 | 直接给最终结论、实际起止、时长和单位；不取当前参数补旧记录 |
-| `sensors / servos / ropeTotals`曲线及statistics | 上行采样选定范围＋分日/周期摘要 | 后端准备四个来源、统计和配对点键；有界返回，缩放后取细节 |
-| `series.statistics / rawStatistics` | 运行设备分日摘要或完整基础高度桶＋原始周期摘要 | COUNT完整可绘曲线与PERIOD基础桶均值统计分别标metricBasis；rawStatistics保留全部有效生产UP原始测量统计 |
-| `unit.ropeExtrema / defaultUnitId` | 两单绳完整逻辑曲线集合／真实分组查询 | 后端返回单绳集合极值与默认组，不把全部次数叠图解释为右侧全日统计，不需新增表 |
+| 历史`sensors / servos`与逐点表 | 已保存上行采样选定范围 | ROPE1/ROPE2/SERVO三来源、真实绳号/身份、顺序/分段和稳定键；有界分批最终完整，不强加总力或旧双表统计 |
+| 动力页曲线与合计 | 上行采样、基础高度桶及真实两索配对 | 单台四范围查询需要时由后端返回ROPE_TOTAL；当前页面SUM需适配，不能继续前端配对 |
+| 概况/归档/报表统计 | 运行分日和周期摘要 | 保留计算能力；statistics/rawStatistics/ropeExtrema/defaultUnitId不因旧UI成为页面必返 |
 | 悬停实际值和总力 | 指定记录/分段/帧的上行采样 | 后端提供sampleKey及已处理读数，前端不自行配对，不用别的时间拼同步读数 |
 | `exceptionEvents / abnormalCount` | 事件表＋记录摘要 | 当前页长度与异常总数分开 |
-| 独立下行异常 | 事件表DOWN事件 | alarm-dashboard以recordKind=EVENT、view=HISTORY分页查询，无上行记录关联或is_alarm=false也可发现，不画正常下行完整曲线 |
-| 告警列表、类别/级别/处理说明、触发阈值 | 事件表is_alarm事件及触发快照 | 后端筛选、去重、排序、分页和结果解释；阈值变更不覆盖旧事件 |
-| 未恢复/严重未恢复/今日发生/今日恢复 | 事件明确告警状态及发生/恢复事实 | 未恢复覆盖全部历史，归档不自动等于恢复；返回统计口径和asOf |
-| 统一对比`units / series / statistics` | 运行摘要、周期摘要＋高度桶 | COUNT/DAY/MONTH/YEAR分组由后端准备；UP、来源、实际范围、数量、版本明确；无去年同期不造线 |
+| 独立下行异常 | 事件表DOWN事件 | 无RUN关联仍可通过事件查询/导出发现；is_alarm=false不强改为普通告警，不画完整下降线 |
+| 最新recent、hasAttention | 同一事件表的持续及近期过程 | 独立latest完整快照；全系统红点由后端给出，事件开始跨日不丢失 |
+| 历史告警list、total | PLC/已确认PLATFORM事件及触发快照 | 独立history按日期/等级/设备筛选分页，同号更新revision；ENDED不代表人工处理/恢复 |
+| 阈值PENDING/APPLIED | 本机保存/生效快照＋两路实际配置 | PENDING保留旧值，确认两路实际生效才更新显示，按t输入kg存储 |
+| 动力统一对比`units / series` | 运行采样、周期摘要＋高度桶 | COUNT/DAY/MONTH/YEAR及逐点表由后端准备；UP、来源、范围/版本明确；无去年同期不造线 |
 | 归档`changePoints / comparisonCurrent / comparisonPrevious / summary` | 已保存周期/分日统计 | 后端对齐两图、比较范围与变化率；分母0或无可比数据为null并说明 |
 | 原始明细导出 | 后台读上行采样和身份快照 | 不用图表降采样结果代替原始数据 |
 
@@ -362,21 +378,22 @@ PERIOD的series.statistics明确metricBasis=HEIGHT_BUCKET_MEANS：averageTension
 | 采样重放去重 | 唯一`(device_id, capture_id, sample_seq)`，内容冲突要暴露 |
 | 分日汇总/来源参与去重 | 分日表`(winch_id, stat_date, record_id)`，用途结合主表筛选 |
 | 系统/单次异常时间轴 | 事件`(device_id, first_observed_at, id)`和`(record_id, first_observed_at, id)` |
-| 当前未确认恢复告警 | 事件`(system_id,is_alarm,alarm_state,first_observed_at,id)`；按状态查询全部历史，不限定今日 |
-| 告警历史及测点筛选 | 事件`(system_id,is_alarm,first_observed_at,id)`，按实际使用补`(sensor_id,first_observed_at,id)`或本机/类别索引 |
-| 今日已恢复告警 | 事件`(system_id,is_alarm,recovered_at,id)`，只依据明确恢复事实 |
+| 同过程重放去重 | event_code唯一；仅对已确认非空PLC会话/过程来源建立唯一键，内部通道保留，不只按设备合并 |
+| 最新持续/近期事件 | 事件`(system_id,is_alarm,event_state,ended_at,id)`及真实发生排序索引；跨日持续不套TODAY |
+| 告警历史及所属设备筛选 | 事件系统/显示发生日期/稳定编号索引，按使用补severity或winch_id；筛选后分页，原始通道仍供追溯 |
+| 同事件版本更新 | 按event_code与revision条件更新；真实新变化推进版本，重复重放不增加计数 |
 | 周期/高度结果 | 使用相应唯一键完整定位或前缀查询 |
 | 后台待更新扫描 | 周期`(needs_rebuild, period_start)` |
 
 主键已覆盖的索引不重复建立；原始表不为每个测量值都建索引。先取一页主记录，再批量取摘要，避免旧DAO逐段查多组测点的附加查询。
 
-新页面曲线由统一对比/历史详情接口接收systemCode及本机、记录/周期和范围，后端准备来源序列与statistics，仍限制单序列及总响应点数。COUNT“全部次数”代表筛选集合，按接口的有界分组或续读契约交付并说明完整性；不能因页面希望“一次返回”就交付无限原始点。详情取消周期刷新，告警服务端筛选分页，大范围CSV后台生成，不把数据库全部交给浏览器。
+新页面曲线由统一对比/历史详情接口接收systemCode及本机、记录/周期范围，仍限制单序列及总响应点数。逐点表使用原始点续读，最终覆盖全部已存选择范围；曲线概览可以缩减但不能当完整表。COUNT“全部次数”按有界分组继续。告警latest为完整近期集合，history为后端筛选分页，二者不互相补数据；大范围CSV后台生成，不把数据库全库交给浏览器。
 
 ## 13. 写入、迁移和当前缺口
 
 拟议写入为：PLC有序帧 → 上层表示入口/大厅 → 清洗编排选择上行与异常 → 持久待保存缓冲 → 统计保存器/DAO短事务。事务处理采样去重、运行/分日摘要、事件与待更新标记，提交后确认缓冲消费。下层不回调上层，门面委派辅助类。
 
-清洗模块负责状态、阈值结论、告警归属和记录结果，统计模块负责可靠保存、预计算、查询组合和导出；配置身份由设备管理/DAO提供。新增页面职责不增加第五个清洗业务服务。新页面的中文结论、ROPE_TOTAL、最终统计由对应模块辅助类准备，不能塞回前端或集中在服务门面。
+PLC负责拉力阈值判断，清洗模块解释PLC状态并维护事件过程、归属和运行结果，命令模块维护阈值下发状态；统计模块负责可靠保存、观测峰值、预计算、查询和导出；配置身份由设备管理/DAO提供。新增页面职责不增加第五个清洗业务服务。新页面的中文结论、ROPE_TOTAL、最终统计由对应模块辅助类准备，不能塞回前端或集中在服务门面。
 
 待保存记录使用稳定的公开record_code关联。数据库暂时不可用时仍沿用该编号；DAO入库时取得内部主键再关联采样，不能在重试时生成另一条运行或因暂时没有自增ID而丢掉原有关联。
 
