@@ -3,22 +3,35 @@
 *.iml
 .vscode/
 
-# 编译产物
+# Java / Maven 构建产物
 target/
 build/
 out/
+*.class
 
-# 日志
+# 日志与运行文件
 logs/
 *.log
 *.gz
-
-# 系统文件
-.DS_Store
+*.pid
 .moquette_uuid
 
-# 本地环境配置和历史备份
+# 本地配置与凭据
 .env
 .env.*
 !.env.example
-archive/
+**/application-local.yml
+**/application-local.yaml
+**/application-local.properties
+*.pem
+*.key
+*.p12
+*.pfx
+
+# 本地历史备份
+/archive/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini
