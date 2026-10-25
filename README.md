@@ -5,6 +5,8 @@ Java 17、Spring Boot 3.2.5、MySQL 8 的单体后端，服务端直接通过 Mo
 
 ## 文档从哪里开始看
 
+先确认当前完成度，可读[系统完成情况与未完成清单](docs/project-completion-status.md)：已有代码、缺失的业务流程、PLC待确认项及分阶段交付标准。
+
 1. [业务流程与页面数据总览](docs/business-flow-and-page-data-overview.md)：四服务、一次上行、页面与历史的完整流程。
 2. [本次前后端职责对齐](docs/frontend-backend-contract-alignment.md)：2026-10-25两份新版附件带来的字段、页面与PLC事件变化。
 3. [PLC与业务统一方案](docs/unified-plc-business-and-data-plan.md)：点位、状态、运动用途、保存与统计规则。
