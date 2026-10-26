@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "checks": [
+    "owned MySQL 8 loopback instance initialized without existing configuration",
+    "fresh schema executed twice; exactly 19 tables",
+    "upgrade executed twice; all seven legacy-table sentinels retained",
+    "legacy public codes remain NULL; no fabricated code backfill",
+    "input SQL has no destructive table/data operations",
+    "run/cycle relation, M204 completion uniqueness, JSON parameters and fixed 0.5m rule",
+    "sample deduplication, repeated heights, actual 0.52m values and four-device selection masks",
+    "DAY/MONTH/QUARTER/HALF_YEAR/YEAR scope uniqueness and enforced non-null/range rules",
+    "per-run day summary and saved-height bucket keys retain distinct statistical bases",
+    "event revision and export task JSON fixtures persist without copying raw data into logs",
+    "remote-operation request uniqueness uses original bytes and does not claim PLC execution",
+    "cross-midnight system full-flow storage: 7 frames, weighted 400kg mean, 700kg peak; distinct from 2 retained points and summed individual peaks",
+    "slot 5 rejects upgrade before any table definition or legacy value changes",
+    "same-name V2 target with a wrong primary key rejects before any table or data changes",
+    "same-name V2 target without AUTO_INCREMENT rejects before any table or data changes",
+    "legacy cleanup rejects a V2 database; all 19 table definitions and data remain unchanged",
+    "17-to-19 runtime upgrade reruns safely and preserves original topology and draft history"
+  ],
+  "cleanup": "owned process stopped and owned temporary directory removed",
+  "baseline": "D:\\javaweb\\all\\SmartWashCloud-Server\\src\\main\\resources\\db\\legacy-compatible-base.sql",
+  "temporary_parent": "D:/javaweb/all/SmartWashCloud-Server/archive/database-validation",
+  "temporary_directory": "D:/javaweb/all/SmartWashCloud-Server/archive/database-validation/smartwash-schema-v2-pinn0wf3",
+  "mysql_version": "D:\\MySQL\\MySQL Server 8.0\\bin\\mysqld.exe  Ver 8.0.37 for Win64 on x86_64 (MySQL Community Server - GPL)",
+  "port": 38895
+}

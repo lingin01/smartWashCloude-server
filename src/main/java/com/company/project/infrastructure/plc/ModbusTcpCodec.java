@@ -99,6 +99,10 @@ public final class ModbusTcpCodec {
     }
 
     public static BigDecimal decode(Point point, byte[] bytes, int offset, boolean bits) {
+        BigDecimal number = decodeRaw(point, bytes, offset, bits);
+        return number == null ? null : bits ? number : number.multiply(point.getScale()).add(point.getOffset());
+    }
+    public static BigDecimal decodeRaw(Point point, byte[] bytes, int offset, boolean bits) {
         if (bits) return (bytes[offset / 8] & (1 << (offset % 8))) != 0 ? BigDecimal.ONE : BigDecimal.ZERO;
         byte[] raw = Arrays.copyOfRange(bytes, offset * 2, offset * 2 + point.getDataType().words() * 2);
         ordered(raw, point.getByteOrder());
@@ -115,7 +119,7 @@ public final class ModbusTcpCodec {
         if (!Double.isFinite(value)) return null;
         BigDecimal number = BigDecimal.valueOf(value);
         if (point.getInvalidValue() != null && number.compareTo(point.getInvalidValue()) == 0) return null;
-        return number.multiply(point.getScale()).add(point.getOffset());
+        return number;
     }
 
     public static List<Integer> encode(Point point, BigDecimal businessValue) {

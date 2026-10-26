@@ -54,6 +54,10 @@ final class CommandState {
     public synchronized List<Entry> entries() {
         return List.copyOf(entries.values());
     }
+    synchronized void remove(String requestId) {
+        Entry entry=entries.remove(requestId);
+        if(entry!=null)pendingSettings.remove(entry.command().deviceId(),requestId);
+    }
 
     public synchronized CleaningCommandStatusBo mark(String requestId, State next, String code, String message) {
         var entry = entries.get(requestId);

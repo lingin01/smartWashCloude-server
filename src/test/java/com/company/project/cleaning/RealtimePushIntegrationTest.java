@@ -25,7 +25,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest(classes = Application.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"cleaning.plc.enabled=false", "cleaning.realtime.push-interval-ms=100"})
+        properties = {"cleaning.plc.enabled=false", "cleaning.realtime.push-interval-ms=100",
+                "spring.profiles.active=offline-test","spring.datasource.url=jdbc:mysql://127.0.0.1:9/offline_test",
+                "spring.datasource.username=offline","spring.datasource.password=offline",
+                "jwt.secret=offline-unit-tests-secret-at-least-32-bytes","jwt.expiration=86400000"})
 class RealtimePushIntegrationTest {
     @LocalServerPort int port;
     @Autowired JwtTokenProvider tokens;

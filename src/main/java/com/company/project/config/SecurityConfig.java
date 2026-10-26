@@ -33,6 +33,7 @@ public class SecurityConfig {
                         new AntPathRequestMatcher("/api/cleaning/**"),
                         new AntPathRequestMatcher("/api/command-center/**"),
                         new AntPathRequestMatcher("/api/auth/**"),
+                        new AntPathRequestMatcher("/api/admin/**"),
                         new AntPathRequestMatcher("/api/users")))
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
@@ -42,6 +43,7 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers(new AntPathRequestMatcher("/api/auth/login", "POST"),
                                 new AntPathRequestMatcher("/api/auth/refresh", "POST")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, error) -> {
@@ -71,7 +73,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
+    public static PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }

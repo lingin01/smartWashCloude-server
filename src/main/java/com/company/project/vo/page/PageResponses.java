@@ -19,13 +19,15 @@ public final class PageResponses {
             BigDecimal systemHeight, BigDecimal systemCurrentHeight, Boolean isMoving, String movementDirection,
             BigDecimal averageTension, BigDecimal averageSpeed, String captureId, String sequence,
             Instant updatedAt, Instant asOf, Instant pushedAt,
-            List<Winch> winches, List<Sensor> sensors, List<FaultSource> faultSources, List<Notice> notices) {}
+            List<Winch> winches, List<Sensor> sensors, List<FaultSource> faultSources, List<Notice> notices,
+            BigDecimal totalTension, java.util.Map<String,BigDecimal> plcValues) {}
 
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record Winch(
             String winchCode, String winchName, Integer groupNo,
             String operatingStatus, String statusText, boolean statusValid,
-            String direction, String directionText, BigDecimal speed, String speedSource, List<String> sensorCodes) {}
+            String direction, String directionText, BigDecimal speed, String speedSource, List<String> sensorCodes,
+            BigDecimal totalTension, BigDecimal currentHeight, BigDecimal torqueForce) {}
 
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record Sensor(
@@ -99,7 +101,8 @@ public final class PageResponses {
             BigDecimal height, BigDecimal heightFrom, BigDecimal heightTo, BigDecimal value, BigDecimal speed,
             String direction, String motionRole, String quality, Boolean valueValid, Boolean speedValid,
             String missingReason, Long sampleCount, Long speedSampleCount,
-            String heightRuleVersion, String computedVersion) {}
+            String heightRuleVersion, String computedVersion, BigDecimal actualHeight,
+            BigDecimal minimum, BigDecimal maximum, Long contributingRuns, String segmentCode) {}
 
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record ChartSegment(String segmentCode, String motionRole, boolean gapBefore, List<ChartPoint> points) {}
@@ -109,7 +112,11 @@ public final class PageResponses {
             String id, String name, String recordCode, String periodType,
             Instant startAt, Instant endAt, boolean endExclusive, String rangeLabel, Instant dataThrough,
             String runState, String recordState, String runResult, String runResultText,
-            Boolean abnormal, boolean empty, String emptyReason, Long includedRunCount) {}
+            Boolean abnormal, boolean empty, String emptyReason, Long includedRunCount, PeriodCounts counts) {}
+
+    @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record PeriodCounts(long started, long normalCompleted, long abnormalCompleted, long abnormalEnded,
+                               long completed, long finished, long running) {}
 
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record TrendSeries(
@@ -176,7 +183,8 @@ public final class PageResponses {
             BigDecimal heightMin, BigDecimal heightMax, HeightLimits heightLimits,
             Instant asOf, TimeRange dataRange, String resolution, boolean complete, String nextCursor,
             Integer loadedPointCount, Aggregation aggregation, List<EventSummary> exceptionEvents,
-            Long eventTotal, boolean eventsComplete, String eventNextCursor, List<Notice> notices) {}
+            Long eventTotal, boolean eventsComplete, String eventNextCursor, List<Notice> notices,
+            List<RunSeries> winchTotals, List<RunSeries> systemTotals, List<RunSeries> speeds) {}
 
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record SourceReading(String sourceRole, String sensorCode, BigDecimal value,
@@ -200,7 +208,7 @@ public final class PageResponses {
             BigDecimal triggerValue, BigDecimal peakValue, Instant peakAt, String unit,
             String peakSource, String peakCoverage, Boolean hasDataGap,
             BigDecimal threshold, String thresholdKind, String configurationVersion,
-            String direction, BigDecimal occurredHeight, String message) {}
+            String direction, BigDecimal occurredHeight, String message, Integer faultCode, java.util.Map<String,BigDecimal> faultDetails) {}
 
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record LatestAlarmResponse(
@@ -234,7 +242,8 @@ public final class PageResponses {
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record ArchivePoint(
             String axisKey, String label, Instant time, BigDecimal progressPercent,
-            BigDecimal tension, BigDecimal speed, Long normalAlarms, Long seriousAlarms) {}
+            BigDecimal tension, BigDecimal speed, Long normalAlarms, Long seriousAlarms, BigDecimal height,
+            Long sampleCount, Long contributingRuns) {}
 
     @Builder @JsonInclude(JsonInclude.Include.ALWAYS)
     public record ArchiveRanges(ArchiveDateRange change, ArchiveDateRange current, ArchiveDateRange reference) {}

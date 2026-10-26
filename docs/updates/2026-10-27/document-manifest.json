@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-27",
+  "canonical_documents": [
+    "README.md",
+    "docs/controller-api-specification.md",
+    "docs/current-api-reference.md",
+    "docs/database/README.md",
+    "docs/external-api-contract.md",
+    "docs/page-controller-implementation.md",
+    "docs/project-completion-status.md",
+    "docs/updates/2026-10-26/backend-complete-summary.md",
+    "docs/updates/2026-10-26/README.md",
+    "docs/updates/2026-10-26/files/README.md",
+    "docs/database/migrations/V20261026__upgrade_cleaning_v2.sql",
+    "docs/database/migrations/V20261027__m106_runtime.sql"
+  ],
+  "new_documents": [
+    "backend-implementation.md",
+    "implementation-progress.md",
+    "README.md"
+  ],
+  "snapshot_purpose": "本轮文档归档；执行入口以原位置文件和当前部署说明为准"
+}

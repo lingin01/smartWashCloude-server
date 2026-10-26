@@ -79,8 +79,11 @@ class PlcFieldCaptureSupportTest {
             for (int index = 0; index < frames.size(); index++) {
                 var frame = PlcFieldCapture.JSON.readValue(frames.get(index), PlcReadSnapshotDto.class);
                 var stored = PlcFieldCapture.JSON.readValue(samples.get(index), TelemetrySample.class);
+                var replayed=pipeline.accept(frame);
+                assertNotNull(replayed.captureId());
+                assertNotEquals(stored.captureId(),replayed.captureId());
                 assertEquals(PlcFieldCapture.JSON.valueToTree(stored),
-                        PlcFieldCapture.JSON.valueToTree(pipeline.accept(frame)));
+                        PlcFieldCapture.JSON.valueToTree(replayed.withCaptureId(stored.captureId())));
                 assertEquals(0, new BigDecimal("150").compareTo(stored.winches().get(0).tensionAverage()));
                 assertNull(stored.ringHeightMeters());
                 assertFalse(stored.heightValid());
@@ -96,7 +99,17 @@ class PlcFieldCaptureSupportTest {
             Path replayRoot = directory.resolve("replays");
             assertEquals(result.frames(), PlcFieldCapture.replay(result.directory(), replayRoot));
             try (var outputs = Files.list(replayRoot)) {
-                assertEquals(samples, Files.readAllLines(outputs.findFirst().orElseThrow().resolve("realtime.ndjson")));
+                var replayed=Files.readAllLines(outputs.findFirst().orElseThrow().resolve("realtime.ndjson"));
+                assertEquals(samples.size(),replayed.size());
+                String replayCapture=null;
+                for(int i=0;i<samples.size();i++) {
+                    var original=PlcFieldCapture.JSON.readValue(samples.get(i),TelemetrySample.class);
+                    var replay=PlcFieldCapture.JSON.readValue(replayed.get(i),TelemetrySample.class);
+                    assertNotEquals(original.captureId(),replay.captureId());
+                    if(replayCapture==null)replayCapture=replay.captureId();
+                    assertEquals(replayCapture,replay.captureId());
+                    assertEquals(PlcFieldCapture.JSON.valueToTree(original),PlcFieldCapture.JSON.valueToTree(replay.withCaptureId(original.captureId())));
+                }
             }
         }
     }

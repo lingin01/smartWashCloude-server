@@ -18,9 +18,14 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private com.company.project.service.UserService users;
 
     public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public JwtAuthenticationFilter(JwtTokenProvider tokens,com.company.project.service.UserService users) {
+        this(tokens);this.users=users;
     }
 
     @Override
@@ -31,6 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 && !jwtTokenProvider.isRefreshToken(token)) {
             String username = jwtTokenProvider.getUsername(token);
             String role = jwtTokenProvider.getRole(token);
+            if(request.getRequestURI().startsWith("/api/admin/")&&users!=null) {
+                var current=users.getByUsername(username);
+                if(current==null||!Integer.valueOf(1).equals(current.getStatus())) {
+                    filterChain.doFilter(request,response);return;
+                }
+                role=current.getRoleCode()==null?"NONE":current.getRoleCode();
+            }
             List<SimpleGrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + role));
             UsernamePasswordAuthenticationToken authentication =

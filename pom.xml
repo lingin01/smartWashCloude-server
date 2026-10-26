@@ -107,6 +107,7 @@
                     <systemPropertyVariables>
                         <cleaning.plc.enabled>false</cleaning.plc.enabled>
                         <cleaning.history.persistence-enabled>false</cleaning.history.persistence-enabled>
+                        <cleaning.history.runtime-enabled>false</cleaning.history.runtime-enabled>
                     </systemPropertyVariables>
                     <!-- 现场入口在IDE中直接运行；普通mvn test默认排除这四个类。 -->
                     <excludes>

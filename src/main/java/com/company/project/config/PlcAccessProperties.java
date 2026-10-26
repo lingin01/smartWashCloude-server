@@ -38,6 +38,11 @@ public class PlcAccessProperties {
                     || d.maxWriteRegisters < 1 || d.maxWriteRegisters > 123)
                 throw new IllegalArgumentException("PLC 连接或归属配置无效");
             Set<String> points = new HashSet<>(), fields = new HashSet<>();
+            if(d.heightMin!=null&&d.heightMax!=null&&d.heightMin.compareTo(d.heightMax)>=0)
+                throw new IllegalArgumentException("统一最低高度须小于最高高度");
+            if(d.encoderBottomCounts==null||d.encoderBottomCounts.entrySet().stream().anyMatch(e->e.getKey()==null||e.getKey()<1||e.getKey()>4||e.getValue()==null
+                    ||e.getValue().scale()>0&&e.getValue().stripTrailingZeros().scale()>0||e.getValue().compareTo(BigDecimal.valueOf(Integer.MIN_VALUE))<0||e.getValue().compareTo(BigDecimal.valueOf(Integer.MAX_VALUE))>0))
+                throw new IllegalArgumentException("底部编码器值须对应1至4号动力设备的DINT计数");
             Map<Integer, String> winches = new HashMap<>();
             Set<String> ropes = new HashSet<>(), sensors = new HashSet<>();
             for (Point p : d.points) {
@@ -61,7 +66,8 @@ public class PlcAccessProperties {
                 if (!unit.isEmpty() && !unit.equals(p.unit)) throw new IllegalArgumentException("测点业务单位未确认");
                 if (isWinchField(p.field)
                         && blank(p.winchId)) throw new IllegalArgumentException("本机测点缺少统一业务编号");
-                if ("ropeTension".equals(p.field) && (blank(p.ropeId) || blank(p.sensorId) || blank(p.winchId)))
+                if ("ropeTension".equals(p.field) && blank(p.ropeId) && !blank(p.sensorId)) p.ropeId = p.sensorId;
+                if ("ropeTension".equals(p.field) && (blank(p.sensorId) || blank(p.winchId)))
                     throw new IllegalArgumentException("索测点缺少统一业务编号");
                 if ("ropeTension".equals(p.field) && (!ropes.add(p.ropeId) || !sensors.add(p.sensorId)))
                     throw new IllegalArgumentException("不同索槽位不能复用同一索或传感器编号");
@@ -125,6 +131,10 @@ public class PlcAccessProperties {
         private int maxWriteRegisters = 120;
         /** 必须人工核对，不能根据进程重启时间生成配置版本。 */
         private Long configurationVersion;
+        /** 每台独立实测底部计数；未填写时不把首次读数或零冒充标定值。 */
+        private Map<Integer, BigDecimal> encoderBottomCounts = new HashMap<>();
+        private BigDecimal heightMin;
+        private BigDecimal heightMax;
         private List<Point> points = new ArrayList<>();
         private Point emergencyStop;
         private List<Point> parameters = new ArrayList<>();

@@ -28,7 +28,10 @@ class PlcPointConfigurationTest {
     @Test void latestPointMapBindsWithoutImportingChineseExplanations() throws Exception {
         var properties = template();
         var device = properties.getDevices().get(0);
-        assertEquals(48, device.getPoints().size());
+        assertEquals(54, device.getPoints().size());
+        assertEquals("M106",point(properties,"automaticCycleActive",1).getSymbol());
+        assertEquals("M60",point(properties,"cycleAbnormal",1).getSymbol());
+        assertEquals("M61",point(properties,"cycleAbnormalEnd",1).getSymbol());
         assertTrue(device.getPoints().stream().noneMatch(Point::isEnabled));
         assertTrue(device.getPoints().stream().allMatch(p -> p.getAddress() == null));
         for (String field : NEW_WINCH_FIELDS) {

@@ -5,6 +5,8 @@ Java 17、Spring Boot 3.2.5、MySQL 8 的单体后端，服务端直接通过 Mo
 
 ## 文档从哪里开始看
 
+完整后端总结先看[接口、主体流程、实时、历史、统计与线程](docs/updates/2026-10-26/backend-complete-summary.md)：逐项列出当前26个新版入口及兼容接口，统一M106整轮、四机公共高度、五种周期曲线与次数、五类后台任务，并标明代码/SQL现状、接入差距和实施顺序。
+
 最新统一口径先看[实时、M106整轮历史与历史统计](docs/updates/2026-10-26/realtime-history-statistics-overview.md)：M106开始/结束一条系统记录，M60/M61锁存决定三种结果，检修只实时，上行每0.5米留点，周期次数由已保存主记录统计。最新点位与统计分别有配套文档。本轮为规则整理，未修改业务代码或SQL。
 
 2026-10-26先前已落实[数据库优化及17表清单](docs/updates/2026-10-26/README.md)，保留旧3张历史表。该版SQL按旧“一次上行＋所属往返”语义编制；本轮M106主记录口径需在后续实施中同步适配，先前SQL验证不表示新流程已接通。现场数据库未升级。
@@ -17,10 +19,12 @@ Java 17、Spring Boot 3.2.5、MySQL 8 的单体后端，服务端直接通过 Mo
 
 用户提供的信捷PDF已用于[Modbus TCP报文核对](docs/modbus-tcp-document-check-20261025.md)，设备默认单次寄存器读写按120个限制处理。站号已确认为1，IP按现场局域网配置；M区地址映射及32位字序仍需补齐。
 
+本轮已实现页面 Controller，先读[Controller 实现与接入状态](docs/page-controller-implementation.md)：26 个目标入口中，10 个连接现有能力，16 个明确返回业务未就绪。
+
 先确认当前完成度，可读[系统完成情况与未完成清单](docs/project-completion-status.md)：已有代码、缺失的业务流程、PLC待确认项及分阶段交付标准。
 
 1. [业务流程与页面数据总览](docs/business-flow-and-page-data-overview.md)：四服务、一次上行、页面与历史的完整流程。
-2. [本次前后端职责对齐](docs/frontend-backend-contract-alignment.md)：2026-10-25两份新版附件带来的字段、页面与PLC事件变化。
+2. [本次前后端职责对齐](docs/frontend-backend-contract-alignment.md)：2026-10-25页面与PLC事件变化；最新筛选补充见[10月26日附件](docs/reference/page-interface-and-force-filter-20261026.md)。
 3. [PLC与业务统一方案](docs/unified-plc-business-and-data-plan.md)：点位、状态、运动用途、保存与统计规则。
 4. [数据库设计](docs/database/page-driven-database-design.md)：身份映射、参数/阈值快照、历史与预计算。
 5. [页面接口契约](docs/external-api-contract.md)：新页面地址、输入、输出、推送、告警、归档和导出。
@@ -35,7 +39,7 @@ Java 17、Spring Boot 3.2.5、MySQL 8 的单体后端，服务端直接通过 Mo
 空库执行 [schema.sql](src/main/resources/schema.sql)，当前为14张目标表＋3张保留旧历史表，共17表；脚本不创建或切换数据库，不创建默认账号。已有7表基线使用独立增量升级脚本，不能用新库脚本代替升级。
 已使用旧表结构的数据库，请先备份，再审阅 [数据库迁移说明](docs/database/README.md)。应用不会自动运行迁移。
 
-本地在项目根目录 `application-local.yml` 直接填写数据库地址、账号、密码及 JWT 密钥，`dev` 启动会自动读取；无需配置环境变量或系统 PATH。模板见 [application-local.example.yml](application-local.example.yml)，真实本地文件已被 Git 忽略。数据库名需改成自己的实际库；JWT 密钥至少32字节，使用固定的私有随机值。
+本地在项目根目录 [application-local.yml](application-local.yml) 直接填写数据库地址、账号、密码及 JWT 密钥，`dev` 启动会自动读取；无需配置环境变量或系统 PATH。模板见 [application-local.example.yml](application-local.example.yml)。按用户明确要求，该应用配置及 `field-config/field-test.yml`、`field-config/plc.yml` 随仓库提交，配置中的凭据对仓库访问者可见。数据库名需对应实际目标库；JWT 密钥至少32字节，使用固定的私有随机值。
 
 ```bash
 mvn clean verify
@@ -50,7 +54,7 @@ mvn spring-boot:run
 
 ## 当前API
 
-下表是当前代码；真实请求/返回、SSE及命令限制见[现有接口参考](docs/current-api-reference.md)。新版`/api/command-center/...`页面契约另见[页面接口说明](docs/external-api-contract.md)，尚未实施迁移。
+下表是当前代码；真实请求/返回、SSE及命令限制见[现有接口参考](docs/current-api-reference.md)。新版`/api/command-center/...`路由已加入，逐项可用状态见[Controller 实现说明](docs/page-controller-implementation.md)；以下表格保留旧设备接口，不能直接作为新页面返回结构。
 
 | 方法 | 路径 | 用途 |
 |---|---|---|
@@ -66,15 +70,15 @@ mvn spring-boot:run
 
 登录和用户信息沿用 `/api/auth`，账号管理沿用 `/api/admin/user`。当前账号管理权限仍需要单独完善，不能将设备接口鉴权测试理解为全站生产权限验收。
 
-当前设备接口没有旧地址别名，也没有远程启动、复位、解除急停、暂停/恢复接口。新页面systemCode、IDLE、t和显式null需后续表示层适配；不将当前deviceId、STANDBY、kg及省略空字段的响应当成新页面协议。
+当前设备接口没有旧地址别名，也没有远程启动、复位、解除急停、暂停/恢复接口。新首页已通过表示层适配systemCode、IDLE、t和显式null；系统映射使用外部cleaning.page.systems并核对账号授权。新历史等入口仍返回未就绪，旧deviceId、STANDBY、kg响应不作为新页面协议。
 
 ## 业务核心与数据流
 
 从页面和PLC事实理解整个业务，先读[业务流程与页面数据总览](docs/business-flow-and-page-data-overview.md)：包含四服务分工、一次上行的生命周期、各页数据来源、原始历史与周期计算，以及跨日记录示例。
 
-基于PLC点位和页面需求的[统一方案](docs/unified-plc-business-and-data-plan.md)保留业务依据，最新急停点位为M15、往返完成为M204。数据库已按最新评审提供17表DDL，采集到新表的业务流程仍待实现；旧方案中的十表目标不再是当前建表清单。
+基于PLC点位和页面需求的[统一方案](docs/unified-plc-business-and-data-plan.md)保留业务依据，远程急停为M15；最新主记录按M106开始/结束、M60/M61锁存结果，详见前述统一口径。数据库已提供17表DDL，M106新口径及采集到新表的业务流程仍待实施；页面Controller与部分现有能力适配已完成。
 
-列表、上行明细、异常和周期表格的导出设计见[导出方案](docs/data-export-plan.md)。导出任务表已纳入当前DDL，执行器与接口尚未实现。
+列表、历史明细、异常和周期表格的导出设计见[导出方案](docs/data-export-plan.md)。导出任务表已纳入当前DDL，路由已建立并返回EXPORT_NOT_READY，任务生成和文件执行器尚未实现。
 
 大厅为统一入口，下设清洗、命令、安全、统计四个业务服务。每个服务委派自己的规则/状态辅助类；系统状态只在清洗模块维护，命令状态只在命令模块维护。设备管理与DAO不反调上层。职责、目录、单向调用图和四条流程见 [核心架构说明](docs/architecture.md)。
 
@@ -95,6 +99,6 @@ PLC → 底层驱动/快照队列 → 上层PLC表示入口 → 大厅 → 清�
 
 急停写响应确认仅表示请求已写入，设备是否停止仍需读取实际状态。参数写入后仍有版本持久化和回读核对待实现，不伪装为完整成功。
 
-保留了已有历史批次事务保存实现，`cleaning.history.persistence-enabled` 默认关闭。目前还没有从实时快照识别作业/轮次、生成历史批次的生产链路，也没有历史列表、曲线、轮次/周期统计或可靠原始归档。当前统计接口仅计算实际接收样本，SSE已连接同一份清洗只读状态；没有用空接口冒充未完成的历史功能。
+保留了已有历史批次事务保存实现，`cleaning.history.persistence-enabled` 默认关闭。目前还没有从实时快照识别作业/轮次、生成历史批次的生产链路；历史列表、曲线和导出已有HTTP入口，但对应业务查询、周期统计和可靠原始归档仍未接通。当前统计接口仅计算实际接收样本，SSE已连接同一份清洗只读状态；没有用空接口冒充未完成的历史功能。
 
 实时缓存和命令状态为进程内数据，重启不能恢复。目标方案长期保留上行原始与异常历史，当前可靠归档闭环仍待实施；没有自动删除业务历史的任务。

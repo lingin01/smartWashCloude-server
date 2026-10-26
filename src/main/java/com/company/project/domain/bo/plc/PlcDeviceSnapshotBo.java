@@ -9,5 +9,10 @@ public record PlcDeviceSnapshotBo(String deviceId, boolean online, long sequence
         Instant sampledAt, List<Point> points) {
     public PlcDeviceSnapshotBo { points = List.copyOf(points); }
     public record Point(String pointId, String field, int index, String ropeId, String sensorId,
-                        String winchId, String unit, BigDecimal activeValue, BigDecimal value, boolean valid) { }
+                        String winchId, String unit, BigDecimal activeValue, BigDecimal value, boolean valid, BigDecimal rawValue) {
+        public Point(String pointId, String field, int index, String ropeId, String sensorId,
+                String winchId, String unit, BigDecimal activeValue, BigDecimal value, boolean valid) {
+            this(pointId, field, index, ropeId, sensorId, winchId, unit, activeValue, value, valid, null);
+        }
+    }
 }

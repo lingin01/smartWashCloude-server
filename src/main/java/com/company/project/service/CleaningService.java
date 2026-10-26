@@ -16,4 +16,7 @@ public interface CleaningService {
     Optional<CleaningCommandStatusBo> operationByCommandCode(String deviceId, String commandCode);
     com.company.project.domain.bo.page.PageSystemBo pageSystem(String systemCode);
     java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems();
+    default StoredSettingsBo saveStoredSettings(CleaningOperationContext context,long version,CleaningSettingsBo value) { return null; }
+    default StoredThresholdsBo saveStoredThresholds(CleaningOperationContext context,String winchId,long version,
+            java.util.List<StoredThresholdsBo.Value> values) { return null; }
 }

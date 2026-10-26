@@ -42,6 +42,7 @@ public final class ModbusTcpDevice implements AutoCloseable {
             }
             if (System.nanoTime() >= deadline) {
                 online = false;
+                client.close();
                 appendInvalid(values, block.points());
                 continue;
             }
@@ -53,7 +54,10 @@ public final class ModbusTcpDevice implements AutoCloseable {
                 for (Point point : block.points()) {
                     java.math.BigDecimal number = ModbusTcpCodec.decode(point, data,
                             point.getAddress() - block.address(), block.function() <= 2);
-                    values.add(value(point, number, number != null));
+                    values.add(new PlcReadSnapshotDto.PointValue(point.getId(), point.getField(), point.getIndex(),
+                            point.getRopeId(), point.getSensorId(), point.getWinchId(), point.getUnit(),
+                            point.getActiveValue(), number, number != null,
+                            ModbusTcpCodec.decodeRaw(point, data, point.getAddress() - block.address(), block.function() <= 2)));
                 }
             } catch (ModbusTcpCodec.DeviceException rejected) {
                 // 设备有效返回异常，当前测点无效；不伪造数值，也不把点位错误当作硬件故障码。

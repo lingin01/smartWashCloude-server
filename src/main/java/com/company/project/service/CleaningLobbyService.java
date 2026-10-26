@@ -21,4 +21,12 @@ public interface CleaningLobbyService {
     com.company.project.domain.bo.page.PageSystemBo pageSystem(CleaningOperationContext context,
             String systemCode, String permission);
     java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems(CleaningOperationContext context);
+    default com.company.project.domain.bo.telemetry.HistoryReader history(CleaningOperationContext context) { return null; }
+    default com.company.project.domain.bo.ExportAccess exports(CleaningOperationContext context) { return null; }
+    default com.company.project.domain.bo.StoredSettingsBo storedSettings(CleaningOperationContext context) { return null; }
+    default com.company.project.domain.bo.StoredThresholdsBo thresholds(CleaningOperationContext context,String winchId) { return null; }
+    default com.company.project.domain.bo.StoredThresholdsBo saveThresholds(CleaningOperationContext context,String winchId,long version,
+            java.util.List<com.company.project.domain.bo.StoredThresholdsBo.Value> values) { return null; }
+    default com.company.project.domain.bo.StoredSettingsBo saveSettings(CleaningOperationContext context,long version,
+            com.company.project.domain.bo.CleaningSettingsBo value) { return null; }
 }

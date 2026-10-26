@@ -1,5 +1,7 @@
 # 当前已实现接口参考
 
+> 2026-10-27实施更新：当前代码已接通M106整轮、实时换算、19表保存、历史/五周期统计、严重告警、配置保存和导出。参见[当前实施与接口补充](updates/2026-10-27/backend-implementation.md)。下文原有“待实现/17表/10个已接通”等标注保留为此前设计或核对基线，不能作为当前完成度；参数PUT当前只保存平台版本，现场生效须有PLC依据。
+
 核对日期：2026-10-26。新页面26个目标方法的路由已实现，逐项业务可用状态见[Controller实现与接入状态](page-controller-implementation.md)。本文第1节保留旧设备接口真实行为；账号接口已按新版适配。最终页面契约见[对外接口说明](external-api-contract.md)。
 
 当前清洗前缀记为`B = /api/cleaning/devices/{deviceId}`。接口使用Bearer访问令牌；GET无请求体，POST/PUT使用JSON。Result为`{code,message,data}`，data=null也输出；旧VO仍沿用NON_NULL而新页面VO显式输出可空字段。安全过滤器401现返回JSON及data.errorCode。当前测量单位kg、m、m/min，Instant时间通常序列化为UTC的Z。

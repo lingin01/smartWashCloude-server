@@ -22,7 +22,7 @@ public class PageSnapshotConverter {
         Boolean online = state == null ? null : state.online();
         boolean offline = Boolean.FALSE.equals(online);
         boolean statusValid = state != null && (offline || state.statusValid());
-        String systemStatus = statusValid ? offline ? "OFFLINE"
+        String systemStatus = statusValid ? offline && state.systemStatus()!=SystemRealtimeStatusBo.Status.MAINTENANCE ? "OFFLINE"
                 : state.systemStatus() == null ? null : pageStatus(state.systemStatus().name()) : null;
         List<Winch> winches = new ArrayList<>();
         List<Sensor> sensors = new ArrayList<>();
@@ -32,7 +32,7 @@ public class PageSnapshotConverter {
         for (PageSystemBo.Winch configured : system.winches()) {
             TelemetrySample.WinchSample reading = sample == null ? null : sample.winches().stream()
                     .filter(value -> Objects.equals(configured.winchId(), value.winchId())).findFirst().orElse(null);
-            String operatingStatus = reading == null ? null : offline ? "OFFLINE"
+            String operatingStatus = reading == null ? null : offline ? "MAINTENANCE".equals(systemStatus)?"MAINTENANCE":"OFFLINE"
                     : statusValid ? pageStatus(reading.status()) : null;
             String direction = reading == null || offline ? null : direction(reading.direction());
             BigDecimal speed = reading != null && !offline && reading.speedValid() ? reading.speed() : null;
@@ -40,7 +40,10 @@ public class PageSnapshotConverter {
                     .groupNo(configured.groupNo()).operatingStatus(operatingStatus).statusText(statusText(operatingStatus))
                     .statusValid(operatingStatus != null).direction(direction).directionText(directionText(direction))
                     .speed(speed).speedSource(speed == null ? "UNCONFIRMED" : "AXIS")
-                    .sensorCodes(configured.sensors().stream().map(PageSystemBo.Sensor::sensorCode).toList()).build());
+                    .sensorCodes(configured.sensors().stream().map(PageSystemBo.Sensor::sensorCode).toList())
+                    .totalTension(reading==null||offline?null:tonnes(reading.totalTension()))
+                    .currentHeight(reading==null||offline?null:reading.heightMeters())
+                    .torqueForce(reading==null||offline?null:tonnes(reading.torqueKg())).build());
             if (reading != null && !blank(reading.faultCode())) {
                 faults.add(FaultSource.builder().objectType("WINCH").objectCode(configured.winchCode())
                         .objectName(configured.winchName()).faultCode(reading.faultCode())
@@ -59,7 +62,8 @@ public class PageSnapshotConverter {
                 sensors.add(Sensor.builder().sensorCode(configuredSensor.sensorCode()).sensorName(configuredSensor.sensorName())
                         .winchCode(configured.winchCode()).groupNo(configured.groupNo()).ropeNo(configuredSensor.ropeNo())
                         .metric(null).position(null).pressure(pressure).unit("t")
-                        .status(offline ? "OFFLINE" : null).statusText(offline ? "离线" : "测点状态未确认")
+                        .status(offline ? "MAINTENANCE".equals(systemStatus)?"MAINTENANCE":"OFFLINE" : null)
+                        .statusText(offline ? "MAINTENANCE".equals(systemStatus)?"检修":"离线" : "测点状态未确认")
                         .statusValid(offline).quality(offline ? "OFFLINE" : pressure == null ? "INVALID" : "GOOD")
                         .missingReason(missingReason).alarmThreshold(null).safetyValue(null).build());
             }
@@ -70,24 +74,29 @@ public class PageSnapshotConverter {
                     .reasonCode(state.emergencyActive() ? "SYSTEM_EMERGENCY" : "PLC_FAULT")
                     .message(state.emergencyActive() ? "已采集急停状态，不代表四台电机本体均故障" : "已采集系统故障状态").build());
         }
-        notices.add(new Notice("PLC_STATE_MAPPING_PENDING", "当前使用既有采集状态；新版总状态及单机状态点位尚待业务层接入", "SYSTEM", system.systemCode()));
+        if(state==null||!"D201".equals(state.source()))
+            notices.add(new Notice("PLC_STATE_MAPPING_PENDING", "当前使用兼容状态字段，需配置D201及单机状态点", "SYSTEM", system.systemCode()));
         notices.add(new Notice("THRESHOLD_NOT_CONFIGURED", "尚无已确认生效的页面阈值快照", "SYSTEM", system.systemCode()));
         notices.add(new Notice("SENSOR_STATE_UNCONFIRMED", "当前采集对象未提供各传感器的PLC告警等级，不按拉力值推断", "SYSTEM", system.systemCode()));
-        notices.add(new Notice("MOVEMENT_NOT_CONFIRMED", "当前业务快照未提供独立的有轴运动事实", "SYSTEM", system.systemCode()));
-        notices.add(new Notice("CAPTURE_ID_UNAVAILABLE", "当前采集快照尚未提供采集实例编号", "SYSTEM", system.systemCode()));
+        boolean movementKnown=sample!=null&&state!=null&&"D201".equals(state.source())&&!offline
+                && sample.winches().stream().allMatch(w->!"UNKNOWN".equals(w.direction()));
+        if(!movementKnown)notices.add(new Notice("MOVEMENT_NOT_CONFIRMED", "尚无可用于判断运动的方向位", "SYSTEM", system.systemCode()));
+        if(sample==null||sample.captureId()==null)notices.add(new Notice("CAPTURE_ID_UNAVAILABLE", "当前采集快照尚未提供采集实例编号", "SYSTEM", system.systemCode()));
         if (sample == null) notices.add(new Notice("NO_SNAPSHOT", "尚未取得该系统的实时采集快照", "SYSTEM", system.systemCode()));
 
         return HomeSnapshot.builder().systemCode(system.systemCode()).systemName(system.systemName())
                 .available(sample != null).systemStatus(systemStatus).systemStatusText(statusText(systemStatus))
                 .statusValid(statusValid && systemStatus != null).online(online).systemHeight(null)
                 .systemCurrentHeight(sample != null && !offline && sample.heightValid() ? sample.ringHeightMeters() : null)
-                .isMoving(null).movementDirection(state == null || offline ? null : direction(state.direction()))
+                .isMoving(movementKnown?sample.winches().stream().anyMatch(TelemetrySample.WinchSample::running):null)
+                .movementDirection(state == null || offline ? null : direction(state.direction()))
                 .averageTension(sample != null && !offline && sample.validTensionCount() > 0 ? tonnes(sample.groupAverageTension()) : null)
                 .averageSpeed(sample != null && !offline && sample.validSpeedCount() > 0 ? sample.groupAverageSpeed() : null)
-                .captureId(null).sequence(sample == null ? null : Long.toString(sample.sequence()))
+                .captureId(sample==null?null:sample.captureId()).sequence(sample == null ? null : Long.toString(sample.sequence()))
+                .plcValues(state==null||!state.online()?null:state.plcValues())
                 .updatedAt(sample == null ? null : sample.sampledAt()).asOf(Instant.now()).pushedAt(null)
                 .winches(List.copyOf(winches)).sensors(List.copyOf(sensors)).faultSources(List.copyOf(faults))
-                .notices(List.copyOf(notices)).build();
+                .notices(List.copyOf(notices)).totalTension(sample==null||offline?null:tonnes(sample.systemTotalTension())).build();
     }
 
     private static BigDecimal tonnes(BigDecimal kilograms) { return kilograms == null ? null : kilograms.movePointLeft(3); }

@@ -37,6 +37,7 @@ logs/
 
 # 现场采集证据仍忽略；两份现场配置按用户要求纳入版本管理。
 /field-results/
+/var/
 /field-config/*
 !/field-config/field-test.yml
 !/field-config/plc.yml

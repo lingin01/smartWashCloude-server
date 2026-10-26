@@ -79,4 +79,24 @@ public class CleaningLobbyServiceImpl implements CleaningLobbyService {
     @Override public java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems(CleaningOperationContext context) {
         return cleaning.pageSystems().stream().filter(system -> safety.canReadPageSystem(context, system)).toList();
     }
+    @Override public com.company.project.domain.bo.telemetry.HistoryReader history(CleaningOperationContext context) {
+        safety.verifyRead(context);return statistics.history(context.deviceId());
+    }
+    @Override public com.company.project.domain.bo.ExportAccess exports(CleaningOperationContext context) {
+        safety.verifyRead(context);return statistics.exports(context);
+    }
+    @Override public com.company.project.domain.bo.StoredSettingsBo storedSettings(CleaningOperationContext context) {
+        safety.verifyRead(context);return statistics.storedSettings(context.deviceId());
+    }
+    @Override public com.company.project.domain.bo.StoredThresholdsBo thresholds(CleaningOperationContext context,String winchId) {
+        safety.verifyRead(context);return statistics.thresholds(context.deviceId(),winchId);
+    }
+    @Override public com.company.project.domain.bo.StoredThresholdsBo saveThresholds(CleaningOperationContext context,String winchId,long version,
+            java.util.List<com.company.project.domain.bo.StoredThresholdsBo.Value> values) {
+        safety.verifyPagePermission(context,"device:write");return cleaning.saveStoredThresholds(context,winchId,version,values);
+    }
+    @Override public com.company.project.domain.bo.StoredSettingsBo saveSettings(CleaningOperationContext context,long version,
+            com.company.project.domain.bo.CleaningSettingsBo value) {
+        safety.verifyPagePermission(context,"device:write");return cleaning.saveStoredSettings(context,version,value);
+    }
 }

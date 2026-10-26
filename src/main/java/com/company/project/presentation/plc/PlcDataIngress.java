@@ -43,9 +43,14 @@ public class PlcDataIngress {
             var next = messages.peekResult();
             if (next == null) break;
             presentation.onWriteResult(next.payload());
-            messages.completeResult(next.messageId());
+            if(!messages.completeResult(next.messageId()))break;
         }
-        for (var snapshot : messages.takeSnapshots()) presentation.onSnapshot(snapshot.payload());
+        for (int index = 0; index < 128; index++) {
+            var snapshot = messages.peekOrderedSnapshot();
+            if (snapshot == null) break;
+            presentation.onSnapshot(snapshot.payload());
+            messages.completeSnapshot(snapshot.messageId());
+        }
     }
     @PreDestroy public void stop() {
         active = false;
@@ -59,7 +64,7 @@ public class PlcDataIngress {
             var result = messages.peekResult();
             if (result == null) break;
             presentation.onWriteResult(result.payload());
-            messages.completeResult(result.messageId());
+            if(!messages.completeResult(result.messageId()))break;
         }
     }
 }

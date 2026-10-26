@@ -14,7 +14,7 @@
 # r≤12时h=r×1.043；12<r≤24时h=12.516+(r-12)×1.1069；r>24时h=25.7988+(r-24)×1.171，h单位m。
 # 速度按同一连续运行段的高度差/轴计时差×60计算，单位m/min；不再使用旧D61～D65速度点。
 # 没有独立圆环高度点，不配置ringHeight，也不把四机平均高度冒充圆环真实高度。
-# 新状态/独立方向/编码器及计时可进入采集文件；当前业务快照的对应转换尚未全部实现。
+# 已接入D201/独立方向/编码器分段高度/轴计时速度；M106为正式整轮边界。
 # 正式依据：docs/plc-realtime-point-review-20261025.md、docs/plc-data-omissions-20261025.md。
 cleaning:
   plc:
@@ -34,7 +34,19 @@ cleaning:
         max-read-registers: 120
         max-write-registers: 120
         configuration-version: null  # 实际参数版本，不能按进程重启时间生成
+        encoder-bottom-counts: {}     # 实测后填写，例如1:计数、2:计数；不能把未知底部写成0
+        height-min: null              # 四机统一最低高度，单位m
+        height-max: null              # 四机统一最高高度，单位m
         points:
+          # M106上升沿开始整轮、下降沿结束；M60/M61在轮内锁存，结束批先读异常位再结算。
+          # 这些点位未确认M区Modbus地址，默认关闭。D10/M204不作为历史边界。
+          - {id: automaticCycleActive-1, symbol: M106, field: automaticCycleActive, index: 1, enabled: false, address: null, function-code: 1, data-type: BOOLEAN, byte-order: ABCD, scale: 1, offset: 0, active-value: 1, unit: ""}
+          - {id: cycleAbnormal-1, symbol: M60, field: cycleAbnormal, index: 1, enabled: false, address: null, function-code: 1, data-type: BOOLEAN, byte-order: ABCD, scale: 1, offset: 0, active-value: 1, unit: ""}
+          - {id: cycleAbnormalEnd-1, symbol: M61, field: cycleAbnormalEnd, index: 1, enabled: false, address: null, function-code: 1, data-type: BOOLEAN, byte-order: ABCD, scale: 1, offset: 0, active-value: 1, unit: ""}
+          # PLC累计数只用于显示；原值类型/字序/地址确认后启用。
+          - {id: downwardCompletedCount-1, symbol: D11, field: downwardCompletedCount, index: 1, enabled: false, address: null, function-code: 3, data-type: null, byte-order: null, scale: 1, offset: 0, unit: ""}
+          - {id: upwardFaultCount-1, symbol: D12, field: upwardFaultCount, index: 1, enabled: false, address: null, function-code: 3, data-type: null, byte-order: null, scale: 1, offset: 0, unit: ""}
+          - {id: downwardFaultCount-1, symbol: D13, field: downwardFaultCount, index: 1, enabled: false, address: null, function-code: 3, data-type: null, byte-order: null, scale: 1, offset: 0, unit: ""}
           # ==================== 一、系统状态与运行事实 ====================
           # 系统状态：D201，1运行、2待机、3检修、4故障。
           # 保留PLC状态码；通信在线由TCP连接提供，不从状态码猜测。

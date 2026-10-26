@@ -137,6 +137,11 @@ BEGIN
         SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND column_name='settings_source_snapshot' AND data_type='json';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible column cleaning_system.settings_source_snapshot'; END IF;
     END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND column_name='runtime_state_snapshot';
+    IF v_count>0 THEN
+        SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND column_name='runtime_state_snapshot' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible column cleaning_system.runtime_state_snapshot'; END IF;
+    END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND index_name='uk_system_public_code';
     IF v_index_columns IS NOT NULL AND (v_index_columns<>'system_code' OR v_count<>0) THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible index cleaning_system.uk_system_public_code'; END IF;
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND column_name='system_code') THEN
@@ -460,6 +465,10 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_run_record.boundary_snapshot'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_run_record' AND column_name='last_committed_batch_key' AND is_nullable='YES' AND data_type='varbinary' AND character_maximum_length=128;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_run_record.last_committed_batch_key'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_run_record' AND column_name='runtime_snapshot' AND is_nullable='YES' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_run_record.runtime_snapshot'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_run_record' AND column_name='height_snapshot' AND is_nullable='YES' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_run_record.height_snapshot'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_run_record' AND column_name='summary_version' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_run_record.summary_version'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_run_record' AND column_name='created_at' AND is_nullable='NO' AND data_type='datetime' AND datetime_precision=3;
@@ -500,6 +509,12 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Missing AUTO_INCREMENT: cleaning_up_sample.id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND column_name='id' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_up_sample.id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND column_name='record_id' AND is_nullable='YES' AND data_type='bigint' AND column_type LIKE '%unsigned%';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_up_sample.record_id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND column_name='sample_key' AND is_nullable='YES' AND data_type='varchar' AND character_maximum_length=128;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_up_sample.sample_key'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND column_name='runtime_snapshot' AND is_nullable='YES' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_up_sample.runtime_snapshot'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND column_name='system_id' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_up_sample.system_id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND column_name='device_id' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
@@ -756,6 +771,10 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_up_sample.conversion_snapshot'; END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND index_name='uk_sample_source';
     IF v_index_columns IS NULL OR v_index_columns<>'device_id,capture_id,sample_seq' OR v_count<>0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_up_sample.uk_sample_source'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND index_name='uk_sample_public';
+    IF v_index_columns IS NULL OR v_index_columns<>'sample_key' OR v_count<>0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_up_sample.uk_sample_public'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND index_name='idx_sample_record_sequence';
+    IF v_index_columns IS NULL OR v_index_columns<>'record_id,sample_seq,id' OR v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_up_sample.idx_sample_record_sequence'; END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND index_name='idx_sample_device_time';
     IF v_index_columns IS NULL OR v_index_columns<>'device_id,sampled_at,id' OR v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_up_sample.idx_sample_device_time'; END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_up_sample' AND index_name='idx_sample_w1_run_time';
@@ -1008,6 +1027,8 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Missing AUTO_INCREMENT: cleaning_exception_event.id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_exception_event' AND column_name='id' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_exception_event.id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_exception_event' AND column_name='runtime_snapshot' AND is_nullable='YES' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_exception_event.runtime_snapshot'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_exception_event' AND column_name='event_code' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_exception_event.event_code'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_exception_event' AND column_name='system_id' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
@@ -1132,6 +1153,8 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Missing AUTO_INCREMENT: cleaning_period_summary.id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_period_summary' AND column_name='id' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_period_summary.id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_period_summary' AND column_name='runtime_snapshot' AND is_nullable='YES' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_period_summary.runtime_snapshot'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_period_summary' AND column_name='system_id' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_period_summary.system_id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_period_summary' AND column_name='scope_kind' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=8;
@@ -1262,8 +1285,14 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='system_id' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.system_id'; END IF;
-    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='winch_id' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='winch_id' AND is_nullable='YES' AND data_type='varchar' AND character_maximum_length=64;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.winch_id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='scope_kind' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=8;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.scope_kind'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='scope_id' AND is_nullable='YES' AND data_type='varchar' AND character_maximum_length=64;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.scope_id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='runtime_snapshot' AND is_nullable='YES' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.runtime_snapshot'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='source_role' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=16;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.source_role'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='period_type' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=12;
@@ -1292,6 +1321,10 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.speed_sum_mpm'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='speed_sample_count' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.speed_sample_count'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='speed_min_mpm' AND is_nullable='YES' AND data_type='decimal' AND numeric_precision=10 AND numeric_scale=4;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.speed_min_mpm'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='speed_max_mpm' AND is_nullable='YES' AND data_type='decimal' AND numeric_precision=10 AND numeric_scale=4;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.speed_max_mpm'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='contributing_run_count' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.contributing_run_count'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND column_name='data_from' AND is_nullable='YES' AND data_type='datetime' AND datetime_precision=3;
@@ -1306,6 +1339,8 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_height_bucket.built_at'; END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND index_name='uk_height_bucket';
     IF v_index_columns IS NULL OR v_index_columns<>'system_id,winch_id,source_role,period_type,period_start,rule_version,bucket_index' OR v_count<>0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_height_bucket.uk_height_bucket'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_height_bucket' AND index_name='uk_height_scope';
+    IF v_index_columns IS NULL OR v_index_columns<>'system_id,scope_kind,scope_id,source_role,period_type,period_start,rule_version,bucket_index' OR v_count<>0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_height_bucket.uk_height_scope'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.table_constraints WHERE constraint_schema=DATABASE() AND table_name='cleaning_height_bucket' AND constraint_name='ck_height_period_type' AND constraint_type='CHECK' AND enforced='YES';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Missing enforced check: cleaning_height_bucket.ck_height_period_type'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.table_constraints WHERE constraint_schema=DATABASE() AND table_name='cleaning_height_bucket' AND constraint_name='ck_height_source' AND constraint_type='CHECK' AND enforced='YES';
@@ -1322,6 +1357,14 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Missing AUTO_INCREMENT: cleaning_export_task.id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND column_name='id' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_export_task.id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND column_name='request_id' AND is_nullable='YES' AND data_type='varbinary' AND character_maximum_length=128;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_export_task.request_id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND column_name='request_hash' AND is_nullable='YES' AND data_type='binary' AND character_maximum_length=32;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_export_task.request_hash'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND column_name='runtime_snapshot' AND is_nullable='YES' AND data_type='json';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_export_task.runtime_snapshot'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND column_name='store_id' AND is_nullable='YES' AND data_type='varchar' AND character_maximum_length=36;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_export_task.store_id'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND column_name='task_code' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_export_task.task_code'; END IF;
     SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND column_name='creator_user_id' AND is_nullable='NO' AND data_type='bigint' AND column_type NOT LIKE '%unsigned%';
@@ -1368,6 +1411,8 @@ BEGIN
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_export_task.updated_at'; END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND index_name='uk_export_code';
     IF v_index_columns IS NULL OR v_index_columns<>'task_code' OR v_count<>0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_export_task.uk_export_code'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND index_name='uk_export_request';
+    IF v_index_columns IS NULL OR v_index_columns<>'system_id,creator_user_id,request_id' OR v_count<>0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_export_task.uk_export_request'; END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND index_name='idx_export_creator_time';
     IF v_index_columns IS NULL OR v_index_columns<>'creator_user_id,created_at,id' OR v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_export_task.idx_export_creator_time'; END IF;
     SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_export_task' AND index_name='idx_export_system_time';
@@ -1489,6 +1534,44 @@ BEGIN
     SELECT COUNT(*) INTO v_count FROM information_schema.table_constraints WHERE constraint_schema=DATABASE() AND table_name='cleaning_operation_audit' AND constraint_name='ck_operation_confirmation' AND constraint_type='CHECK' AND enforced='YES';
     IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Missing enforced check: cleaning_operation_audit.ck_operation_confirmation'; END IF;
     END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='cleaning_runtime_checkpoint') THEN
+    SELECT COUNT(*) INTO v_count FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='cleaning_runtime_checkpoint' AND engine='InnoDB' AND table_collation=v_collation;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 storage/collation: cleaning_runtime_checkpoint'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index) INTO v_index_columns FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_runtime_checkpoint' AND index_name='PRIMARY';
+    IF v_index_columns IS NULL OR v_index_columns<>'device_id,capture_id' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible primary key: cleaning_runtime_checkpoint'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_runtime_checkpoint' AND column_name='device_id' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_runtime_checkpoint.device_id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_runtime_checkpoint' AND column_name='capture_id' AND is_nullable='NO' AND data_type='binary' AND character_maximum_length=16;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_runtime_checkpoint.capture_id'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_runtime_checkpoint' AND column_name='last_sequence' AND is_nullable='NO' AND data_type='bigint' AND column_type LIKE '%unsigned%';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_runtime_checkpoint.last_sequence'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_runtime_checkpoint' AND column_name='updated_at' AND is_nullable='NO' AND data_type='datetime' AND datetime_precision=3;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_runtime_checkpoint.updated_at'; END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='cleaning_event_run') THEN
+    SELECT COUNT(*) INTO v_count FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='cleaning_event_run' AND engine='InnoDB' AND table_collation=v_collation;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 storage/collation: cleaning_event_run'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index) INTO v_index_columns FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_event_run' AND index_name='PRIMARY';
+    IF v_index_columns IS NULL OR v_index_columns<>'event_code,record_code' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible primary key: cleaning_event_run'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_event_run' AND column_name='event_code' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_event_run.event_code'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_event_run' AND column_name='record_code' AND is_nullable='NO' AND data_type='varchar' AND character_maximum_length=64;
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 column cleaning_event_run.record_code'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY seq_in_index), MAX(non_unique) INTO v_index_columns,v_count FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_event_run' AND index_name='idx_event_run_record';
+    IF v_index_columns IS NULL OR v_index_columns<>'record_code,event_code' OR v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible existing V2 index cleaning_event_run.idx_event_run_record'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY ordinal_position) INTO v_index_columns FROM information_schema.key_column_usage WHERE constraint_schema=DATABASE() AND table_name='cleaning_event_run' AND constraint_name='fk_event_run_event' AND referenced_table_schema=DATABASE() AND referenced_table_name='cleaning_exception_event';
+    IF v_index_columns IS NULL OR v_index_columns<>'event_code' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible foreign key: cleaning_event_run.fk_event_run_event'; END IF;
+    SELECT GROUP_CONCAT(referenced_column_name ORDER BY ordinal_position) INTO v_index_columns FROM information_schema.key_column_usage WHERE constraint_schema=DATABASE() AND table_name='cleaning_event_run' AND constraint_name='fk_event_run_event';
+    IF v_index_columns IS NULL OR v_index_columns<>'event_code' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible referenced key: cleaning_event_run.fk_event_run_event'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE() AND table_name='cleaning_event_run' AND constraint_name='fk_event_run_event' AND delete_rule='RESTRICT' AND update_rule='RESTRICT';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible foreign-key rules: cleaning_event_run.fk_event_run_event'; END IF;
+    SELECT GROUP_CONCAT(column_name ORDER BY ordinal_position) INTO v_index_columns FROM information_schema.key_column_usage WHERE constraint_schema=DATABASE() AND table_name='cleaning_event_run' AND constraint_name='fk_event_run_record' AND referenced_table_schema=DATABASE() AND referenced_table_name='cleaning_run_record';
+    IF v_index_columns IS NULL OR v_index_columns<>'record_code' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible foreign key: cleaning_event_run.fk_event_run_record'; END IF;
+    SELECT GROUP_CONCAT(referenced_column_name ORDER BY ordinal_position) INTO v_index_columns FROM information_schema.key_column_usage WHERE constraint_schema=DATABASE() AND table_name='cleaning_event_run' AND constraint_name='fk_event_run_record';
+    IF v_index_columns IS NULL OR v_index_columns<>'record_code' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible referenced key: cleaning_event_run.fk_event_run_record'; END IF;
+    SELECT COUNT(*) INTO v_count FROM information_schema.referential_constraints WHERE constraint_schema=DATABASE() AND table_name='cleaning_event_run' AND constraint_name='fk_event_run_record' AND delete_rule='RESTRICT' AND update_rule='RESTRICT';
+    IF v_count<>1 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Incompatible foreign-key rules: cleaning_event_run.fk_event_run_record'; END IF;
+    END IF;
     -- All data/schema checks completed. Only additive DDL follows.
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND column_name='system_code') THEN
     SET @_sw_v2_sql=REPLACE('ALTER TABLE cleaning_system ADD COLUMN system_code VARCHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL', 'utf8mb4_general_ci', v_collation);
@@ -1536,6 +1619,10 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND column_name='settings_source_snapshot') THEN
     SET @_sw_v2_sql=REPLACE('ALTER TABLE cleaning_system ADD COLUMN settings_source_snapshot JSON NULL', 'utf8mb4_general_ci', v_collation);
+    PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND column_name='runtime_state_snapshot') THEN
+    SET @_sw_v2_sql=REPLACE('ALTER TABLE cleaning_system ADD COLUMN runtime_state_snapshot JSON NULL', 'utf8mb4_general_ci', v_collation);
     PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema=DATABASE() AND table_name='cleaning_system' AND index_name='uk_system_public_code') THEN
@@ -1646,6 +1733,8 @@ BEGIN
     SET @_sw_v2_sql='ALTER TABLE cleaning_rope_sensor ADD CONSTRAINT ck_sensor_public_code CHECK (sensor_code IS NULL OR CHAR_LENGTH(TRIM(sensor_code)) > 0)';
     PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
     END IF;
+    SET @_sw_v2_sql=REPLACE('ALTER TABLE cleaning_system MODIFY COLUMN ring_id VARCHAR(64) NULL', 'utf8mb4_general_ci', v_collation);
+    PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
     SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_cycle_record (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     cycle_code VARCHAR(64) NOT NULL,
@@ -1742,6 +1831,8 @@ BEGIN
     conversion_snapshot JSON NULL,
     boundary_snapshot JSON NULL,
     last_committed_batch_key VARBINARY(128) NULL COMMENT ''最近提交批次关联；保存器还须事务化维护重放检查点'',
+    runtime_snapshot JSON NULL COMMENT ''M106整轮及有界上行摘要，不保存全流波形'',
+    height_snapshot JSON NULL COMMENT ''已结束单轮的高度代表统计缓存，不复制原始帧'',
     summary_version BIGINT UNSIGNED NOT NULL DEFAULT 0,
     created_at DATETIME(3) NOT NULL,
     updated_at DATETIME(3) NOT NULL,
@@ -1758,6 +1849,9 @@ BEGIN
     PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
     SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_up_sample (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    record_id BIGINT UNSIGNED NULL,
+    sample_key VARCHAR(128) NULL,
+    runtime_snapshot JSON NULL COMMENT ''选中批次的真实原值、换算与高度节点'',
     system_id VARCHAR(64) NOT NULL,
     device_id VARCHAR(64) NOT NULL,
     capture_id BINARY(16) NOT NULL,
@@ -1887,6 +1981,8 @@ BEGIN
     conversion_snapshot JSON NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_sample_source (device_id, capture_id, sample_seq),
+    UNIQUE KEY uk_sample_public (sample_key),
+    KEY idx_sample_record_sequence (record_id, sample_seq, id),
     KEY idx_sample_device_time (device_id, sampled_at, id),
     CONSTRAINT ck_sample_selection CHECK (selection_mask BETWEEN 1 AND 15),
     CONSTRAINT ck_sample_height_step CHECK (height_step_m = 0.500),
@@ -2008,6 +2104,7 @@ BEGIN
     PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
     SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_exception_event (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    runtime_snapshot JSON NULL,
     event_code VARCHAR(64) NOT NULL,
     system_id VARCHAR(64) NOT NULL,
     device_id VARCHAR(64) NOT NULL,
@@ -2064,6 +2161,7 @@ BEGIN
     PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
     SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_period_summary (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    runtime_snapshot JSON NULL,
     system_id VARCHAR(64) NOT NULL,
     scope_kind VARCHAR(8) NOT NULL,
     scope_id VARCHAR(64) NOT NULL,
@@ -2127,7 +2225,10 @@ BEGIN
     SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_height_bucket (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     system_id VARCHAR(64) NOT NULL,
-    winch_id VARCHAR(64) NOT NULL,
+    winch_id VARCHAR(64) NULL,
+    scope_kind VARCHAR(8) NOT NULL DEFAULT ''WINCH'',
+    scope_id VARCHAR(64) NULL,
+    runtime_snapshot JSON NULL,
     source_role VARCHAR(16) NOT NULL,
     period_type VARCHAR(12) NOT NULL,
     period_start DATETIME(3) NOT NULL,
@@ -2142,6 +2243,8 @@ BEGIN
     max_kg DECIMAL(14,4) NULL,
     speed_sum_mpm DECIMAL(30,6) NOT NULL DEFAULT 0,
     speed_sample_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    speed_min_mpm DECIMAL(10,4) NULL,
+    speed_max_mpm DECIMAL(10,4) NULL,
     contributing_run_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
     data_from DATETIME(3) NULL,
     data_through DATETIME(3) NULL,
@@ -2150,13 +2253,18 @@ BEGIN
     built_at DATETIME(3) NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_height_bucket (system_id, winch_id, source_role, period_type, period_start, rule_version, bucket_index),
+    UNIQUE KEY uk_height_scope (system_id, scope_kind, scope_id, source_role, period_type, period_start, rule_version, bucket_index),
     CONSTRAINT ck_height_period_type CHECK (period_type IN (''DAY'',''MONTH'',''QUARTER'',''HALF_YEAR'',''YEAR'')),
-    CONSTRAINT ck_height_source CHECK (source_role IN (''ROPE1'',''ROPE2'',''SERVO'',''ROPE_TOTAL'')),
+    CONSTRAINT ck_height_source CHECK (source_role IN (''ROPE1'',''ROPE2'',''SERVO'',''ROPE_TOTAL'',''SPEED'')),
     CONSTRAINT ck_height_ranges CHECK (period_end > period_start AND height_to_m > height_from_m)
 ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT=''跨次高度平均派生桶，不复制一套原始点'';', 'utf8mb4_general_ci', v_collation);
     PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
     SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_export_task (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    request_id VARBINARY(128) NULL,
+    request_hash BINARY(32) NULL,
+    runtime_snapshot JSON NULL,
+    store_id VARCHAR(36) NULL,
     task_code VARCHAR(64) NOT NULL,
     creator_user_id BIGINT NOT NULL,
     system_id VARCHAR(64) NOT NULL,
@@ -2181,6 +2289,7 @@ BEGIN
     updated_at DATETIME(3) NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_export_code (task_code),
+    UNIQUE KEY uk_export_request (system_id, creator_user_id, request_id),
     KEY idx_export_creator_time (creator_user_id, created_at, id),
     KEY idx_export_system_time (system_id, created_at, id),
     KEY idx_export_queue (status, created_at, id),
@@ -2234,6 +2343,23 @@ BEGIN
     CONSTRAINT fk_operation_user FOREIGN KEY (operator_user_id) REFERENCES t_user(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT ck_operation_confirmation CHECK (write_acknowledged IN (0,1) AND execution_confirmed IN (0,1) AND revision > 0)
 ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT=''远程操作幂等审计；申请写应答与实际执行分别留证'';', 'utf8mb4_general_ci', v_collation);
+    PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
+    SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_runtime_checkpoint (
+    device_id VARCHAR(64) NOT NULL,
+    capture_id BINARY(16) NOT NULL,
+    last_sequence BIGINT UNSIGNED NOT NULL,
+    updated_at DATETIME(3) NOT NULL,
+    PRIMARY KEY (device_id, capture_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT=''持久输入检查点，事务重放不重复摘要或次数'';', 'utf8mb4_general_ci', v_collation);
+    PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
+    SET @_sw_v2_sql=REPLACE('CREATE TABLE IF NOT EXISTS cleaning_event_run (
+    event_code VARCHAR(64) NOT NULL,
+    record_code VARCHAR(64) NOT NULL,
+    PRIMARY KEY (event_code, record_code),
+    KEY idx_event_run_record (record_code, event_code),
+    CONSTRAINT fk_event_run_event FOREIGN KEY (event_code) REFERENCES cleaning_exception_event(event_code) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_event_run_record FOREIGN KEY (record_code) REFERENCES cleaning_run_record(record_code) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT=''持续异常与受影响M106整轮多对多关联'';', 'utf8mb4_general_ci', v_collation);
     PREPARE sw_v2_stmt FROM @_sw_v2_sql; EXECUTE sw_v2_stmt; DEALLOCATE PREPARE sw_v2_stmt;
 END//
 CALL smartwash_upgrade_cleaning_v20261026()//

@@ -37,9 +37,10 @@ REJECT_SLOT_DB = "reject_slot_db"
 REJECT_PRIMARY_DB = "reject_primary_db"
 REJECT_AUTO_DB = "reject_auto_db"
 LEGACY_GUARD_DB = "legacy_guard_db"
+RUNTIME_UPGRADE_DB = "runtime_upgrade_db"
 TEST_DATABASES = frozenset((FRESH_DB, UPGRADE_DB, REJECT_SLOT_DB,
-                            REJECT_PRIMARY_DB, REJECT_AUTO_DB, LEGACY_GUARD_DB))
-V2_TABLE_COUNT = 17
+                            REJECT_PRIMARY_DB, REJECT_AUTO_DB, LEGACY_GUARD_DB,RUNTIME_UPGRADE_DB))
+V2_TABLE_COUNT = 19
 CREATE_FLAGS = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
 
@@ -1081,6 +1082,20 @@ def main() -> int:
         verify_v2_features(server, report)
         verify_rejected_upgrades(server, baseline, migration_sql, table_source, schema_sql,
                                  legacy_cleanup_sql, expected_tables, report)
+        import build_schema_v2 as builder
+        old=builder.V2_BASELINE.read_text(encoding="utf-8-sig")
+        runtime_sql=builder.RUNTIME_UPGRADE.read_text(encoding="utf-8-sig")
+        assert_additive_sql("17-to-19 runtime migration",runtime_sql)
+        create_test_database(server,RUNTIME_UPGRADE_DB)
+        server.sql(builder.render_fresh(baseline,old)+"\n"+legacy_seed_sql()+"\n"+cycle_sentinel_sql(),RUNTIME_UPGRADE_DB)
+        before_runtime=fingerprints(server,RUNTIME_UPGRADE_DB,columns)
+        for _ in range(2):
+            server.sql(runtime_sql,RUNTIME_UPGRADE_DB)
+            check_schema(server,RUNTIME_UPGRADE_DB,expected_tables)
+            if fingerprints(server,RUNTIME_UPGRADE_DB,columns)!=before_runtime:
+                raise VerificationError("Runtime migration modified original legacy values")
+            require_scalar(server,"SELECT cycle_code FROM cleaning_cycle_record WHERE id=930000001;","UPGRADE-GUARD-CYCLE","Runtime migration lost draft history",RUNTIME_UPGRADE_DB)
+        report["checks"].append("17-to-19 runtime upgrade reruns safely and preserves original topology and draft history")
         report["status"] = "passed"
     except (OSError, ValueError, VerificationError, subprocess.SubprocessError) as failure:
         report["error"] = str(failure)

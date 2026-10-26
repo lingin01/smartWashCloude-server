@@ -29,7 +29,8 @@ public final class PageRequests {
     @Data @EqualsAndHashCode(callSuper = true)
     public static class WinchTrendQuery extends WinchQuery {
         @NotBlank @Pattern(regexp = "FORCE_COMPARISON") private String viewType;
-        @NotBlank @Pattern(regexp = "COUNT|DAY|MONTH|YEAR") private String comparisonView;
+        @NotBlank @Pattern(regexp = "COUNT|DAY|MONTH|QUARTER|HALF_YEAR|YEAR") private String comparisonView;
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) private LocalDate periodStartDate;
         @NotBlank @Pattern(regexp = "OVERVIEW|RAW") private String resolution = "OVERVIEW";
         private String cursor;
         @Min(1) @Max(2000) private int maxPointsPerSeries = 500;
@@ -51,7 +52,7 @@ public final class PageRequests {
         @NotBlank @Pattern(regexp = "STARTED|FIRST_OBSERVED") private String dateBasis = "STARTED";
         private boolean includeAvailableDates;
         private String availableDatesCursor;
-        @Pattern(regexp = "COMPLETED|INCOMPLETE|FAULT_TERMINATED") private String runResult;
+        @Pattern(regexp = "NORMAL_COMPLETED|ABNORMAL_COMPLETED|ABNORMAL_ENDED|COMPLETED|INCOMPLETE|FAULT_TERMINATED") private String runResult;
         private String winchCode;
         @AssertTrue(message = "startTime 必须早于 endTime")
         public boolean isRangeValid() { return increasing(startTime, endTime); }
@@ -123,8 +124,8 @@ public final class PageRequests {
     @Data @EqualsAndHashCode(callSuper = true)
     public static class ArchiveQuery extends WinchQuery {
         @NotBlank @Pattern(regexp = "TENSION|SPEED") private String metric;
-        @Pattern(regexp = "WINCH_TENSION|TRACTION_ROPE_TENSION") private String tensionMetric;
-        @NotBlank @Pattern(regexp = "WEEK|MONTH|QUARTER|YEAR") private String period = "WEEK";
+        @Pattern(regexp = "WINCH_TENSION|TRACTION_ROPE_TENSION|TOTAL_TENSION") private String tensionMetric;
+        @NotBlank @Pattern(regexp = "DAY|WEEK|MONTH|QUARTER|HALF_YEAR|YEAR") private String period = "WEEK";
         @NotBlank @Pattern(regexp = "SELECTED_PERIODS|PREVIOUS_RUN|HISTORY_AVERAGE|PREVIOUS_PERIOD|YEAR_ON_YEAR")
         private String comparisonType = "PREVIOUS_RUN";
         private String recordCode;
@@ -206,12 +207,12 @@ public final class PageRequests {
             String winchCode, String deviceCode,
             @Pattern(regexp = "ALL_UP|PRODUCTION_UP|RECOVERY_UP|MAINTENANCE_UP|UNCLASSIFIED_UP") String motionRole,
             @Pattern(regexp = "UP|DOWN|STOP") String direction,
-            @Pattern(regexp = "COMPLETED|INCOMPLETE|FAULT_TERMINATED") String runResult,
+            @Pattern(regexp = "NORMAL_COMPLETED|ABNORMAL_COMPLETED|ABNORMAL_ENDED|COMPLETED|INCOMPLETE|FAULT_TERMINATED") String runResult,
             @Pattern(regexp = "(?:(?:NORMAL|SERIOUS)(?:,(?:NORMAL|SERIOUS))*)?") String levels,
             @Pattern(regexp = "DAY|WEEK|MONTH|QUARTER|HALF_YEAR|YEAR") String period,
             LocalDate startDate, LocalDate endDate,
             @Pattern(regexp = "TENSION|SPEED") String metric,
-            @Pattern(regexp = "WINCH_TENSION|TRACTION_ROPE_TENSION") String tensionMetric) {
+            @Pattern(regexp = "WINCH_TENSION|TRACTION_ROPE_TENSION|TOTAL_TENSION") String tensionMetric) {
         @AssertTrue(message = "导出须选择编号集合或有序范围，不能混用")
         public boolean isSelectionValid() {
             if (!paired(startTime, endTime) || !increasing(startTime, endTime)
@@ -235,7 +236,7 @@ public final class PageRequests {
             return switch (exportType) {
                 case "RUN_LIST", "RUN_SAMPLES" -> filters.eventCodes() == null && filters.startDate() == null;
                 case "EXCEPTIONS" -> filters.recordCode() == null && filters.recordCodes() == null && filters.startDate() == null;
-                case "PERIOD_STATISTICS" -> filters.startDate() != null && filters.period() != null && filters.winchCode() != null;
+                case "PERIOD_STATISTICS" -> filters.startDate() != null && filters.period() != null;
                 default -> true;
             };
         }

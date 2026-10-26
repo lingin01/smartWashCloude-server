@@ -1,5 +1,7 @@
 # 当前系统完成情况、未完成项与实施顺序
 
+> 2026-10-27实施更新：当前代码已接通M106整轮、实时换算、19表保存、历史/五周期统计、严重告警、配置保存和导出。参见[当前实施与接口补充](updates/2026-10-27/backend-implementation.md)。下文原有“待实现/17表/10个已接通”等标注保留为此前设计或核对基线，不能作为当前完成度；参数PUT当前只保存平台版本，现场生效须有PLC依据。
+
 核对日期：2026-10-26。已包含本轮页面Controller实现；上一份仅文档基线为`085f019`。依据当前Java、配置、建表脚本及已确定的[业务方案](business-flow-and-page-data-overview.md)、[接口规范](external-api-contract.md)和[Controller清单](controller-api-specification.md)。
 
 2026-10-26最新业务整理见[实时、M106整轮历史与统计](updates/2026-10-26/realtime-history-statistics-overview.md)：记录边界及三类结果已有新点位依据；本次只整理文档，SQL仍是先前17表版本，业务保存/查询链路需后续适配。下文旧待确认项不得继续把M106开始/结束和M60/M61含义列为未提供。

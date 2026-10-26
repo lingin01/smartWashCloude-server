@@ -1,5 +1,7 @@
 # Controller 接口实施清单：17 个页面入口与 9 个补充入口
 
+> 2026-10-27实施更新：当前代码已接通M106整轮、实时换算、19表保存、历史/五周期统计、严重告警、配置保存和导出。参见[当前实施与接口补充](updates/2026-10-27/backend-implementation.md)。下文原有“待实现/17表/10个已接通”等标注保留为此前设计或核对基线，不能作为当前完成度；参数PUT当前只保存平台版本，现场生效须有PLC依据。
+
 修订日期：2026-10-26。依据两份最新附件及[页面接口主规范](external-api-contract.md)，列出 Controller 的方法、输入、输出、权限和服务调用路径。26个方法的Java路由和类型已实现；[实际接入状态](page-controller-implementation.md)列出10个连接现有能力的方法和16个业务未就绪方法。当前没有新增历史表或PLC写点。
 
 当前代码行为见[现有接口参考](current-api-reference.md)。页面与 PLC 事件分工见[告警和阈值处理说明](plc-alarm-and-threshold-processing.md)，图表范围见[详情拉力对比处理说明](detail-force-comparison-processing.md)。字段的最终名称、空值与枚举以主规范为准；下列类型现已集中在PageRequests/PageResponses及账号DTO/VO中；最终服务路径仍是后续业务接入要求。

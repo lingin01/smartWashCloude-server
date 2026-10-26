@@ -37,6 +37,7 @@ public class PlcDeviceService {
                     : device.write(operation, () -> messages.emergencyWaiting(device.id())));
         }
         List<ModbusTcpDevice> active = List.copyOf(devices.values());
+        if (!messages.hasSnapshotCapacity()) return;
         // 每轮最多轮询一个设备，避免失败 PLC 将所有命令拖入长串阻塞。
         for (int count = 0; count < active.size() && !stopping; count++) {
             var device = active.get(cursor);

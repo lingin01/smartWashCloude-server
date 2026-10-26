@@ -11,10 +11,14 @@ spring:
 jwt:
   # 本机固定密钥写在 application-local.yml；环境变量仅为可选兼容入口。
   secret: ${JWT_SECRET:}
-  expiration: 86400000
+  expiration: 2592000000
+  refresh-expiration: 7776000000
 
 # 先在目标库执行 schema.sql；当前采集链路尚未生成历史批次。
 cleaning:
   history:
     persistence-enabled: false
     persistence-interval-ms: 2000
+    # 执行对应迁移并核对系统绑定后启用；关闭时仍保留旧接口和实时读取。
+    runtime-enabled: false
+    spool-directory: var/history-inbox

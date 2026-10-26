@@ -1,0 +1,39 @@
+{
+  "status": "passed",
+  "default_maven_verify": {
+    "tests": 126,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "includes": [
+      "application context startup",
+      "real SSE authentication and account-disable handling"
+    ],
+    "excludes": "four field-only test entry classes configured in pom.xml"
+  },
+  "isolated_runtime_integration": {
+    "tests": 1,
+    "status": "passed",
+    "checks": [
+      "owned MySQL port/datadir/token verified before Java writes",
+      "real inbox and transaction-proxied DAO capture an M106 round",
+      "idempotent replay, invalid sample rollback and source checkpoint",
+      "serious equipment fault and stable run association",
+      "history list/detail/point readback and five periodic height aggregates",
+      "platform configuration saves without PLC points, retries are idempotent, version conflicts roll back",
+      "real CSV and ZIP exports publish atomically and verify task ownership before downloads",
+      "real Spring application starts without a PLC and serves authenticated home/history/trend/archive/configuration HTTP endpoints",
+      "legacy administrator endpoint rejects unauthenticated requests"
+    ]
+  },
+  "isolated_schema_validation": {
+    "status": "passed",
+    "check_groups": 17
+  },
+  "artifact": {
+    "path": "target/iot-platform-1.0.0.jar",
+    "bytes": 32846389,
+    "sha256": "9bca7e4bb69612764c833091be10bda8a059b5a6974c124851185a458d7811d8"
+  },
+  "field_plc_and_business_database_modified": false
+}

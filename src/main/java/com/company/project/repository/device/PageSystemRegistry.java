@@ -27,7 +27,8 @@ public class PageSystemRegistry {
             var winches = source.getWinches().stream().map(w -> new PageSystemBo.Winch(
                     w.getWinchCode(), w.getWinchName(), w.getWinchId(), w.getGroupNo(),
                     w.getSensors().stream().map(s -> new PageSystemBo.Sensor(s.getSensorCode(),
-                            s.getSensorName(), s.getSensorId(), s.getRopeId(), s.getRopeNo())).toList())).toList();
+                            s.getSensorName(), s.getSensorId(),
+                            s.getRopeId()==null || s.getRopeId().isBlank() ? s.getSensorId() : s.getRopeId(), s.getRopeNo())).toList())).toList();
             var system = new PageSystemBo(source.getSystemCode(), source.getSystemName(),
                     source.getDeviceId(), winches, source.getAllowedUsernames());
             validateShape(system);

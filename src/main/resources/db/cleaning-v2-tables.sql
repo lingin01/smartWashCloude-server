@@ -1,5 +1,5 @@
 -- SmartWash V2生成器输入；MySQL 8.0.16+，由tools/database/build_schema_v2.py组合新库与升级脚本。
--- 新增10张表：目标14张，另保留3张旧历史表，迁移期共17张；IF NOT EXISTS不是升级机制。
+-- 新增12张表：目标16张，另保留3张旧历史表，共19张；IF NOT EXISTS不是升级机制。
 -- 请使用生成的schema.sql或独立升级脚本；本输入不创建/切换数据库，不删除或回填数据。
 -- 所有DATETIME(3)由应用显式传UTC；业务DATE按Asia/Shanghai生成。
 -- 所有删除关系均RESTRICT；大样本表由保存器同事务核对对象归属，不逐行建外键。
@@ -103,6 +103,8 @@ CREATE TABLE IF NOT EXISTS cleaning_run_record (
     conversion_snapshot JSON NULL,
     boundary_snapshot JSON NULL,
     last_committed_batch_key VARBINARY(128) NULL COMMENT '最近提交批次关联；保存器还须事务化维护重放检查点',
+    runtime_snapshot JSON NULL COMMENT 'M106整轮及有界上行摘要，不保存全流波形',
+    height_snapshot JSON NULL COMMENT '已结束单轮的高度代表统计缓存，不复制原始帧',
     summary_version BIGINT UNSIGNED NOT NULL DEFAULT 0,
     created_at DATETIME(3) NOT NULL,
     updated_at DATETIME(3) NOT NULL,
@@ -119,6 +121,9 @@ CREATE TABLE IF NOT EXISTS cleaning_run_record (
 
 CREATE TABLE IF NOT EXISTS cleaning_up_sample (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    record_id BIGINT UNSIGNED NULL,
+    sample_key VARCHAR(128) NULL,
+    runtime_snapshot JSON NULL COMMENT '选中批次的真实原值、换算与高度节点',
     system_id VARCHAR(64) NOT NULL,
     device_id VARCHAR(64) NOT NULL,
     capture_id BINARY(16) NOT NULL,
@@ -248,6 +253,8 @@ CREATE TABLE IF NOT EXISTS cleaning_up_sample (
     conversion_snapshot JSON NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_sample_source (device_id, capture_id, sample_seq),
+    UNIQUE KEY uk_sample_public (sample_key),
+    KEY idx_sample_record_sequence (record_id, sample_seq, id),
     KEY idx_sample_device_time (device_id, sampled_at, id),
     CONSTRAINT ck_sample_selection CHECK (selection_mask BETWEEN 1 AND 15),
     CONSTRAINT ck_sample_height_step CHECK (height_step_m = 0.500),
@@ -372,6 +379,7 @@ CREATE TABLE IF NOT EXISTS cleaning_run_system_day (
 
 CREATE TABLE IF NOT EXISTS cleaning_exception_event (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    runtime_snapshot JSON NULL,
     event_code VARCHAR(64) NOT NULL,
     system_id VARCHAR(64) NOT NULL,
     device_id VARCHAR(64) NOT NULL,
@@ -428,6 +436,7 @@ CREATE TABLE IF NOT EXISTS cleaning_exception_event (
 
 CREATE TABLE IF NOT EXISTS cleaning_period_summary (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    runtime_snapshot JSON NULL,
     system_id VARCHAR(64) NOT NULL,
     scope_kind VARCHAR(8) NOT NULL,
     scope_id VARCHAR(64) NOT NULL,
@@ -491,7 +500,10 @@ CREATE TABLE IF NOT EXISTS cleaning_period_summary (
 CREATE TABLE IF NOT EXISTS cleaning_height_bucket (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     system_id VARCHAR(64) NOT NULL,
-    winch_id VARCHAR(64) NOT NULL,
+    winch_id VARCHAR(64) NULL,
+    scope_kind VARCHAR(8) NOT NULL DEFAULT 'WINCH',
+    scope_id VARCHAR(64) NULL,
+    runtime_snapshot JSON NULL,
     source_role VARCHAR(16) NOT NULL,
     period_type VARCHAR(12) NOT NULL,
     period_start DATETIME(3) NOT NULL,
@@ -506,6 +518,8 @@ CREATE TABLE IF NOT EXISTS cleaning_height_bucket (
     max_kg DECIMAL(14,4) NULL,
     speed_sum_mpm DECIMAL(30,6) NOT NULL DEFAULT 0,
     speed_sample_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    speed_min_mpm DECIMAL(10,4) NULL,
+    speed_max_mpm DECIMAL(10,4) NULL,
     contributing_run_count BIGINT UNSIGNED NOT NULL DEFAULT 0,
     data_from DATETIME(3) NULL,
     data_through DATETIME(3) NULL,
@@ -514,13 +528,18 @@ CREATE TABLE IF NOT EXISTS cleaning_height_bucket (
     built_at DATETIME(3) NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_height_bucket (system_id, winch_id, source_role, period_type, period_start, rule_version, bucket_index),
+    UNIQUE KEY uk_height_scope (system_id, scope_kind, scope_id, source_role, period_type, period_start, rule_version, bucket_index),
     CONSTRAINT ck_height_period_type CHECK (period_type IN ('DAY','MONTH','QUARTER','HALF_YEAR','YEAR')),
-    CONSTRAINT ck_height_source CHECK (source_role IN ('ROPE1','ROPE2','SERVO','ROPE_TOTAL')),
+    CONSTRAINT ck_height_source CHECK (source_role IN ('ROPE1','ROPE2','SERVO','ROPE_TOTAL','SPEED')),
     CONSTRAINT ck_height_ranges CHECK (period_end > period_start AND height_to_m > height_from_m)
 ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='跨次高度平均派生桶，不复制一套原始点';
 
 CREATE TABLE IF NOT EXISTS cleaning_export_task (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    request_id VARBINARY(128) NULL,
+    request_hash BINARY(32) NULL,
+    runtime_snapshot JSON NULL,
+    store_id VARCHAR(36) NULL,
     task_code VARCHAR(64) NOT NULL,
     creator_user_id BIGINT NOT NULL,
     system_id VARCHAR(64) NOT NULL,
@@ -545,6 +564,7 @@ CREATE TABLE IF NOT EXISTS cleaning_export_task (
     updated_at DATETIME(3) NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_export_code (task_code),
+    UNIQUE KEY uk_export_request (system_id, creator_user_id, request_id),
     KEY idx_export_creator_time (creator_user_id, created_at, id),
     KEY idx_export_system_time (system_id, created_at, id),
     KEY idx_export_queue (status, created_at, id),
@@ -598,6 +618,23 @@ CREATE TABLE IF NOT EXISTS cleaning_operation_audit (
     CONSTRAINT fk_operation_user FOREIGN KEY (operator_user_id) REFERENCES t_user(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
     CONSTRAINT ck_operation_confirmation CHECK (write_acknowledged IN (0,1) AND execution_confirmed IN (0,1) AND revision > 0)
 ) ENGINE=InnoDB ROW_FORMAT=DYNAMIC DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='远程操作幂等审计；申请写应答与实际执行分别留证';
+
+CREATE TABLE IF NOT EXISTS cleaning_runtime_checkpoint (
+    device_id VARCHAR(64) NOT NULL,
+    capture_id BINARY(16) NOT NULL,
+    last_sequence BIGINT UNSIGNED NOT NULL,
+    updated_at DATETIME(3) NOT NULL,
+    PRIMARY KEY (device_id, capture_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='持久输入检查点，事务重放不重复摘要或次数';
+
+CREATE TABLE IF NOT EXISTS cleaning_event_run (
+    event_code VARCHAR(64) NOT NULL,
+    record_code VARCHAR(64) NOT NULL,
+    PRIMARY KEY (event_code, record_code),
+    KEY idx_event_run_record (record_code, event_code),
+    CONSTRAINT fk_event_run_event FOREIGN KEY (event_code) REFERENCES cleaning_exception_event(event_code) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_event_run_record FOREIGN KEY (record_code) REFERENCES cleaning_run_record(record_code) ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='持续异常与受影响M106整轮多对多关联';
 
 -- 同系统/PLC/设备/记录/轮次归属由保存器在同事务核对；不依靠可空单列外键猜测业务关系。
 -- 高度点唯一键只负责已选批次去重；全采集摘要增量与持久输入检查点须同事务提交，不能据本表唯一键声称已覆盖全流重放。

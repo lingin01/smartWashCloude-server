@@ -32,4 +32,8 @@ public class PageAccess {
     }
 
     public record Resolved(PageSystemBo system, CleaningOperationContext context) {}
+    public com.company.project.domain.bo.telemetry.HistoryReader history(Resolved resolved) {
+        return lobby.history(resolved.context());
+    }
+    public com.company.project.domain.bo.ExportAccess exports(Resolved resolved) {return lobby.exports(resolved.context());}
 }

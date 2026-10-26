@@ -60,6 +60,10 @@ public class PageWebExceptionHandler {
     public ResponseEntity<Result<ErrorData>> invalid(IllegalArgumentException error) {
         return failure(400, "INVALID_REQUEST", error.getMessage());
     }
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<Result<ErrorData>> versionConflict(Exception error) {
+        return failure(409,"CONFIGURATION_VERSION_CONFLICT","配置已被修改，请读取最新版本后重试");
+    }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Result<ErrorData>> responseStatus(ResponseStatusException error) {

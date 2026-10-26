@@ -31,7 +31,7 @@ public class RealtimePushPresentation {
         this.lobby=lobby;this.converter=converter;this.workers=workers;this.intervalMs=intervalMs;
     }
     @PostConstruct public void start(){
-        if(!workers.registerDedicatedPeriodic(WORKER,this::publishCycle,Duration.ofMillis(intervalMs)))
+        if(!workers.registerPeriodic(WORKER,this::publishCycle,Duration.ofMillis(intervalMs)))
             throw new IllegalStateException("实时推送任务重复登记");
     }
     public SseEmitter subscribe(String deviceId,Authentication auth) {

@@ -16,6 +16,8 @@ public class CleaningServiceImpl implements CleaningService {
     private final CleaningSystemState state=new CleaningSystemState();
     private final CleaningOperationPlanner operations=new CleaningOperationPlanner();
     private final CleaningDeviceConverter converter=new CleaningDeviceConverter();
+    private final RunHistoryTracker runs=new RunHistoryTracker();
+    private final java.util.Set<String> restoredDevices=new java.util.HashSet<>();
     public CleaningServiceImpl(DeviceManager devices,CleaningCommandService commands,CleaningStatisticsService statistics) {
         this(devices, commands, statistics, new com.company.project.repository.device.PageSystemRegistry(
                 new com.company.project.config.PageAccessProperties()));
@@ -25,10 +27,42 @@ public class CleaningServiceImpl implements CleaningService {
             com.company.project.repository.device.PageSystemRegistry pageSystems) {
         this.devices=devices;this.commands=commands;this.statistics=statistics;this.pageSystems=pageSystems;
     }
-    @Override public void acceptDeviceSnapshot(PlcDeviceSnapshotBo snapshot) {
+    @jakarta.annotation.PostConstruct public void restore() {
+        for(var system:pageSystems.all()) {
+            restoreDevice(system.deviceId());
+        }
+    }
+    private void restoreDevice(String device) {
+        if(!restoredDevices.add(device))return;
+        statistics.restoredState(device).ifPresent(state::restore);
+        runs.restoreEvents(device,statistics.activeEvents(device));
+    }
+    @Override public synchronized void acceptDeviceSnapshot(PlcDeviceSnapshotBo snapshot) {
+        restoreDevice(snapshot.deviceId());
+        var previous=state.latest(snapshot.deviceId()).orElse(null);
+        if(previous!=null && !state.isRestored(snapshot.deviceId()) && snapshot.sequence()<=previous.sequence()) return;
         devices.recordSnapshot(snapshot);
-        var sample=converter.toRealtime(snapshot,state.latest(snapshot.deviceId()).orElse(null));
+        var configured=devices.activeDevice(snapshot.deviceId()).orElse(null);
+        var configuration=statistics.runtimeConfiguration(snapshot.deviceId());
+        var calibration=calibration(configured,configuration);
+        var sample=runs.pending(snapshot.deviceId(),snapshot.sequence());
+        if(sample==null)sample=converter.toRealtime(snapshot,previous,calibration).withCaptureId(runs.captureId());
+        if(statistics.runtimeEnabled())runs.accept(snapshot,sample,calibration,configuration,statistics::acceptRuntimeWrite);
         if (state.update(sample)) statistics.acceptSample(sample);
+    }
+    private com.company.project.config.PlcAccessProperties.Device calibration(
+            com.company.project.config.PlcAccessProperties.Device configured,java.util.Map<String,Object> saved) {
+        if(saved.isEmpty())return configured;
+        var view=new com.company.project.config.PlcAccessProperties.Device();
+        if(configured!=null) {
+            view.setEncoderBottomCounts(new java.util.HashMap<>(configured.getEncoderBottomCounts()));
+            view.setHeightMin(configured.getHeightMin());view.setHeightMax(configured.getHeightMax());
+        }
+        if(saved.get("encoderBottomCounts") instanceof java.util.Map<?,?> counts)
+            counts.forEach((k,v)->view.getEncoderBottomCounts().put(Integer.parseInt(k.toString()),new java.math.BigDecimal(v.toString())));
+        if(saved.get("heightMin")!=null)view.setHeightMin(new java.math.BigDecimal(saved.get("heightMin").toString()));
+        if(saved.get("heightMax")!=null)view.setHeightMax(new java.math.BigDecimal(saved.get("heightMax").toString()));
+        return view;
     }
     @Override public void acceptDeviceWriteResult(PlcOperationResultBo result) {
         var status=commands.acceptDeviceResult(result);
@@ -50,4 +84,15 @@ public class CleaningServiceImpl implements CleaningService {
                 404, "SYSTEM_NOT_FOUND", "系统不存在"));
     }
     @Override public java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems() { return pageSystems.all(); }
+    @Override public StoredSettingsBo saveStoredSettings(CleaningOperationContext context,long version,CleaningSettingsBo value) {
+        var command=operations.updateSettings(new SettingsUpdateParam(context,version,value));
+        return statistics.saveSettings(command,version,value);
+    }
+    @Override public StoredThresholdsBo saveStoredThresholds(CleaningOperationContext context,String winchId,long version,
+            java.util.List<StoredThresholdsBo.Value> values) {
+        var now=java.time.Instant.now();
+        var command=new CleaningCommand(java.util.UUID.randomUUID().toString(),context.deviceId(),"save_tension_thresholds",
+                java.util.Map.of("winchId",winchId,"expectedVersion",version,"thresholds",values),now,context.requestId(),context.operatorId(),now.plusSeconds(30));
+        return statistics.saveThresholds(command,winchId,version,values);
+    }
 }
