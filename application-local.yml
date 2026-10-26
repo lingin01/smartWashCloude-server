@@ -1,0 +1,11 @@
+# 本机配置，dev 启动自动读取；数据库名称和密码请改为实际值。
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/smartwash_cloud?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: "admin"
+    password: "204815"
+jwt:
+    secret: "hfF-ESqlkzCU4jm-f66n9HsHFIfNesppJaqnWGjtkBnK27tM8rr5DfgsPGwJd79v"
+cleaning:
+  plc:
+    enabled: false

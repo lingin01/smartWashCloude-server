@@ -23,6 +23,8 @@ logs/
 .env.*
 !.env.example
 **/application-local.yml
+# 按用户明确要求，项目根目录这一份应用配置纳入版本管理。
+!/application-local.yml
 **/application-local.yaml
 **/application-local.properties
 *.pem
@@ -33,9 +35,11 @@ logs/
 # 本地历史备份
 /archive/
 
-# 现场采集证据与现场点位配置
+# 现场采集证据仍忽略；两份现场配置按用户要求纳入版本管理。
 /field-results/
-/field-config/
+/field-config/*
+!/field-config/field-test.yml
+!/field-config/plc.yml
 
 # 系统文件
 .DS_Store

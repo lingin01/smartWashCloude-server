@@ -15,7 +15,7 @@
 | `spring.datasource.password` | 数据库密码 |
 | `jwt.secret` | 至少32字节、固定保存的私有随机密钥 |
 
-本机已生成并写入随机 JWT 密钥，无需额外设置；模板中的数据库名 `smartwash_cloud` 是示例，需按实际数据库修改。此文件已被 Git 忽略，不提交真实密码和密钥。数据库仍需事先建立并按数据库说明准备表结构；应用不自动建库或执行迁移。
+本机已生成并写入随机 JWT 密钥，无需额外设置；模板中的数据库名 `smartwash_cloud` 是示例，需按实际数据库修改。按用户明确要求，`application-local.yml` 连同数据库凭据和JWT密钥纳入版本管理，对仓库访问者可见。数据库仍需事先建立并按数据库说明准备表结构；应用不自动建库或执行迁移。
 
 填写后，在 IDEA 中直接运行 `Application`。只做下面的 PLC 采集时，无需运行 `Application`，也不需要数据库或 JWT。
 
@@ -28,7 +28,7 @@
 | `field-config/field-test.yml` | 测试设备编号、采集时长、保存目录、测试库连接和接口账号 |
 | `field-config/plc.yml` | PLC 地址、站号、点位地址、类型、字序、倍率、单位及业务编号 |
 
-新环境可将 `tools/field/field-test.example.yml`、`src/main/resources/plc-points.example.yml` 分别复制到上述位置。所有相对路径以项目根目录为基准，真实文件和默认 `field-results/` 均被 Git 忽略。
+上述两份现场配置已按用户明确要求随仓库提交，拉取代码后可直接查看和修改；需要重新生成时，可复制 `tools/field/field-test.example.yml`、`src/main/resources/plc-points.example.yml`。所有相对路径以项目根目录为基准，采集结果目录 `field-results/` 及其他临时文件继续被 Git 忽略。
 
 点位文件已按最新PLC资料整理为48个读取项及4个写入配置，按系统、四台绞机、故障明细、远程写入分组。中文说明全部为 `#` 注释，不作为配置字段读入Java或采集文件。新状态、独立方向、编码器和轴计时可记录到采集文件，实时业务快照的相应转换仍需后续接入；高度/速度不能直接拿旧模板寄存器替代。
 

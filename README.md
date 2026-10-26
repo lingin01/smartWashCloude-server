@@ -37,7 +37,7 @@ Java 17、Spring Boot 3.2.5、MySQL 8 的单体后端，服务端直接通过 Mo
 空库执行 [schema.sql](src/main/resources/schema.sql)，当前为14张目标表＋3张保留旧历史表，共17表；脚本不创建或切换数据库，不创建默认账号。已有7表基线使用独立增量升级脚本，不能用新库脚本代替升级。
 已使用旧表结构的数据库，请先备份，再审阅 [数据库迁移说明](docs/database/README.md)。应用不会自动运行迁移。
 
-本地在项目根目录 `application-local.yml` 直接填写数据库地址、账号、密码及 JWT 密钥，`dev` 启动会自动读取；无需配置环境变量或系统 PATH。模板见 [application-local.example.yml](application-local.example.yml)，真实本地文件已被 Git 忽略。数据库名需改成自己的实际库；JWT 密钥至少32字节，使用固定的私有随机值。
+本地在项目根目录 [application-local.yml](application-local.yml) 直接填写数据库地址、账号、密码及 JWT 密钥，`dev` 启动会自动读取；无需配置环境变量或系统 PATH。模板见 [application-local.example.yml](application-local.example.yml)。按用户明确要求，该应用配置及 `field-config/field-test.yml`、`field-config/plc.yml` 随仓库提交，配置中的凭据对仓库访问者可见。数据库名需对应实际目标库；JWT 密钥至少32字节，使用固定的私有随机值。
 
 ```bash
 mvn clean verify

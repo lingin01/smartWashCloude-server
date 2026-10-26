@@ -1,0 +1,974 @@
+# 最新PLC点位配置：系统 → 1～4号绞机 → 故障明细 → 远程写入。
+# 中文说明全部使用YAML注释，不增加description/name等字段，不进入Java对象或采集数据。
+# 模板不自动加载；现场main默认读取field-config/plc.yml。
+# symbol是PLC标签；address才是Modbus零基协议地址，两者不可未经确认直接等同。
+# 信捷文档D500地址500仅作D区映射参考；M区映射需现场确认，所有address暂留null。
+# enabled=false的点不会读取；确认地址、类型、字序、单位及业务归属后逐项启用。
+# data-type/byte-order为null表示尚未确认；不能只打开enabled就连接现场。
+# D0～D1字序测试：已知1234567890=0x499602D2，高字18838、低字722；本工具只读不写测试值。
+# 类型可选BOOLEAN/INT16/UINT16/INT32/UINT32/FLOAT32/FLOAT64，字序可选ABCD/BADC/CDAB/DCBA。
+# 当前网络解码为value=raw×scale+offset；BOOLEAN按位读取，active-value只解释有效极性。
+# 八路拉力kg=(raw-10)×0.001×101.9716；电机等效拉力kg=raw×0.35×163.0883/(9.80665×0.16)。
+# 同机两索合力为两路拉力之和，系统总力为八路同批之和；电机等效力单独保留。
+# 编码器原码不是高度：r=(count-bottom)/8192；每台bottom必须现场分别实测。
+# r≤12时h=r×1.043；12<r≤24时h=12.516+(r-12)×1.1069；r>24时h=25.7988+(r-24)×1.171，h单位m。
+# 速度按同一连续运行段的高度差/轴计时差×60计算，单位m/min；不再使用旧D61～D65速度点。
+# 没有独立圆环高度点，不配置ringHeight，也不把四机平均高度冒充圆环真实高度。
+# 新状态/独立方向/编码器及计时可进入采集文件；当前业务快照的对应转换尚未全部实现。
+# 正式依据：docs/plc-realtime-point-review-20261025.md、docs/plc-data-omissions-20261025.md。
+cleaning:
+  plc:
+    enabled: true
+    worker-interval-ms: 50
+    queue-capacity: 256
+    devices:
+      - id: ""                  # 本地通信设备编号
+        enabled: true
+        writes-enabled: false
+        host: ""                # 直接填写现场PLC的局域网IP
+        port: 502
+        unit-id: 1              # 用户已确认站号为1
+        poll-interval-ms: 500
+        timeout-ms: 1000
+        # 信捷《Modbus TCP 报文格式解析》第1页：寄存器单次读写最多120个。
+        max-read-registers: 120
+        max-write-registers: 120
+        configuration-version: null  # 实际参数版本，不能按进程重启时间生成
+        points:
+          # ==================== 一、系统状态与运行事实 ====================
+          # 系统状态：D201，1运行、2待机、3检修、4故障。
+          # 保留PLC状态码；通信在线由TCP连接提供，不从状态码猜测。
+          - id: "systemState-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D201"  # PLC标签，不代替协议地址
+            field: "systemState"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+          # 系统自动运行方向/上下文原码：D202。
+          # 仅确认自动模式相关语义，完整枚举待确认；四台方向分别读取M120～M127。
+          - id: "systemDirectionRaw-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D202"  # PLC标签，不代替协议地址
+            field: "systemDirectionRaw"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+          # 系统总故障位：M3，1有故障、0未激活；此极性已经确认。
+          - id: "fault-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M3"  # PLC标签，不代替协议地址
+            field: "fault"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+          # 系统故障码：D3，保留PLC原始故障分类。
+          # 10～13电机1～4使能故障，15～18电机1～4运行故障，20～27拉力1～8异常，
+          # 28～35传感器1～8故障，40～43编码器1～4异常；保持/清零及并发语义待确认。
+          - id: "faultCode-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D3"  # PLC标签，不代替协议地址
+            field: "faultCode"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+          # PLC完整上行完成次数：D10。
+          # 不是今日次数或本次进程次数；位宽、断电保持、清零/回卷规则待确认。
+          - id: "upwardCompletedCount-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D10"  # PLC标签，不代替协议地址
+            field: "upwardCompletedCount"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "count"  # value输出单位；空字符串表示无单位
+            raw-unit: "count"  # PLC原值单位标记
+          # 本次自动运行计时原码：D16～D17，已知为32位。
+          # 停止/中断后重新计时；确认INT32/UINT32、时间单位和字序后启用，不当累计工时。
+          - id: "automaticRunTimeRaw-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D16"  # PLC标签，不代替协议地址
+            field: "automaticRunTimeRaw"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+          # 自动往返一轮完成：M204，上去再下来算一轮。
+          # 不是单独上行结束；保持/脉冲及清零规则待确认，不能每读到一次1就新增一轮。
+          - id: "cycleCompleted-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M204"  # PLC标签，不代替协议地址
+            field: "cycleCompleted"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+          # 32位字序现场验证：D0～D1。
+          # PLC人员准备已知值1234567890后读取，实测ABCD/CDAB等字序；本点不是生产测量。
+          - id: "wordOrderProbe-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D0"  # PLC标签，不代替协议地址
+            field: "wordOrderProbe"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "INT32"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "count"  # PLC原值单位标记
+
+          # ==================== 二-1、1号绞机及两路传感器 ====================
+          # 1号绞机状态：D203，0待机、1运行、2故障。
+          - id: "winchState-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D203"  # PLC标签，不代替协议地址
+            field: "winchState"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 1号绞机上行指示：M120，1表示上行指示激活。
+          # 与本机下行位配对：1/0上行，0/1下行，0/0无方向指示，1/1冲突；不单凭0/0认定机械已停止。
+          - id: "winchUp-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M120"  # PLC标签，不代替协议地址
+            field: "winchUp"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 1号绞机下行指示：M121，1表示下行指示激活。
+          - id: "winchDown-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M121"  # PLC标签，不代替协议地址
+            field: "winchDown"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 1号绞机编码器原始计数：D53～D54，DINT有符号32位。
+          # 该值不是米；按文件顶部的分层公式和本机实测底部值换算高度，不能继续使用旧D80～D83高度点。
+          - id: "encoderCount-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D53"  # PLC标签，不代替协议地址
+            field: "encoderCount"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "INT32"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "count"  # value输出单位；空字符串表示无单位
+            raw-unit: "count"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 1号绞机连续运行计时：D66，单位秒。
+          # 停机后重新计数；D66～D69相邻，实际位宽及分辨率待确认，不能擅自全部按32位读取。
+          # 后续速度使用同一连续运行段的高度差/计时差×60，不用绝对高度除以当前计时。
+          - id: "axisRunSeconds-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D66"  # PLC标签，不代替协议地址
+            field: "axisRunSeconds"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "s"  # value输出单位；空字符串表示无单位
+            raw-unit: "s"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 1号绞机第1路拉力（全系统第1路）：D30。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D30"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 1号绞机第2路拉力（全系统第2路）：D31。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D31"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 1号绞机电机力矩换算的等效拉力：D70。
+          # value=raw×0.35×163.0883/(9.80665×0.16)，输出kg；这不是力矩原始单位，也不计入两索/八索合力。
+          - id: "winchTorque-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D70"  # PLC标签，不代替协议地址
+            field: "winchTorque"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "36.37895267497055569435026232199579"  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+
+          # ==================== 二-2、2号绞机及两路传感器 ====================
+          # 2号绞机状态：D204，0待机、1运行、2故障。
+          - id: "winchState-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D204"  # PLC标签，不代替协议地址
+            field: "winchState"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 2号绞机上行指示：M122，1表示上行指示激活。
+          # 与本机下行位配对：1/0上行，0/1下行，0/0无方向指示，1/1冲突；不单凭0/0认定机械已停止。
+          - id: "winchUp-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M122"  # PLC标签，不代替协议地址
+            field: "winchUp"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 2号绞机下行指示：M123，1表示下行指示激活。
+          - id: "winchDown-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M123"  # PLC标签，不代替协议地址
+            field: "winchDown"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 2号绞机编码器原始计数：D55～D56，DINT有符号32位。
+          # 该值不是米；按文件顶部的分层公式和本机实测底部值换算高度，不能继续使用旧D80～D83高度点。
+          - id: "encoderCount-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D55"  # PLC标签，不代替协议地址
+            field: "encoderCount"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "INT32"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "count"  # value输出单位；空字符串表示无单位
+            raw-unit: "count"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 2号绞机连续运行计时：D67，单位秒。
+          # 停机后重新计数；D66～D69相邻，实际位宽及分辨率待确认，不能擅自全部按32位读取。
+          # 后续速度使用同一连续运行段的高度差/计时差×60，不用绝对高度除以当前计时。
+          - id: "axisRunSeconds-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D67"  # PLC标签，不代替协议地址
+            field: "axisRunSeconds"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "s"  # value输出单位；空字符串表示无单位
+            raw-unit: "s"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 2号绞机第1路拉力（全系统第3路）：D32。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D32"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 2号绞机第2路拉力（全系统第4路）：D33。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D33"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 2号绞机电机力矩换算的等效拉力：D71。
+          # value=raw×0.35×163.0883/(9.80665×0.16)，输出kg；这不是力矩原始单位，也不计入两索/八索合力。
+          - id: "winchTorque-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D71"  # PLC标签，不代替协议地址
+            field: "winchTorque"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "36.37895267497055569435026232199579"  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+
+          # ==================== 二-3、3号绞机及两路传感器 ====================
+          # 3号绞机状态：D205，0待机、1运行、2故障。
+          - id: "winchState-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D205"  # PLC标签，不代替协议地址
+            field: "winchState"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 3号绞机上行指示：M124，1表示上行指示激活。
+          # 与本机下行位配对：1/0上行，0/1下行，0/0无方向指示，1/1冲突；不单凭0/0认定机械已停止。
+          - id: "winchUp-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M124"  # PLC标签，不代替协议地址
+            field: "winchUp"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 3号绞机下行指示：M125，1表示下行指示激活。
+          - id: "winchDown-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M125"  # PLC标签，不代替协议地址
+            field: "winchDown"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 3号绞机编码器原始计数：D57～D58，DINT有符号32位。
+          # 该值不是米；按文件顶部的分层公式和本机实测底部值换算高度，不能继续使用旧D80～D83高度点。
+          - id: "encoderCount-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D57"  # PLC标签，不代替协议地址
+            field: "encoderCount"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "INT32"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "count"  # value输出单位；空字符串表示无单位
+            raw-unit: "count"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 3号绞机连续运行计时：D68，单位秒。
+          # 停机后重新计数；D66～D69相邻，实际位宽及分辨率待确认，不能擅自全部按32位读取。
+          # 后续速度使用同一连续运行段的高度差/计时差×60，不用绝对高度除以当前计时。
+          - id: "axisRunSeconds-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D68"  # PLC标签，不代替协议地址
+            field: "axisRunSeconds"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "s"  # value输出单位；空字符串表示无单位
+            raw-unit: "s"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 3号绞机第1路拉力（全系统第5路）：D34。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-5"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D34"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 5  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 3号绞机第2路拉力（全系统第6路）：D35。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-6"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D35"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 6  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 3号绞机电机力矩换算的等效拉力：D72。
+          # value=raw×0.35×163.0883/(9.80665×0.16)，输出kg；这不是力矩原始单位，也不计入两索/八索合力。
+          - id: "winchTorque-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D72"  # PLC标签，不代替协议地址
+            field: "winchTorque"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "36.37895267497055569435026232199579"  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+
+          # ==================== 二-4、4号绞机及两路传感器 ====================
+          # 4号绞机状态：D206，0待机、1运行、2故障。
+          - id: "winchState-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D206"  # PLC标签，不代替协议地址
+            field: "winchState"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 4号绞机上行指示：M126，1表示上行指示激活。
+          # 与本机下行位配对：1/0上行，0/1下行，0/0无方向指示，1/1冲突；不单凭0/0认定机械已停止。
+          - id: "winchUp-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M126"  # PLC标签，不代替协议地址
+            field: "winchUp"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 4号绞机下行指示：M127，1表示下行指示激活。
+          - id: "winchDown-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "M127"  # PLC标签，不代替协议地址
+            field: "winchDown"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 1  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "BOOLEAN"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: "ABCD"  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "bool"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 4号绞机编码器原始计数：D59～D60，DINT有符号32位。
+          # 该值不是米；按文件顶部的分层公式和本机实测底部值换算高度，不能继续使用旧D80～D83高度点。
+          - id: "encoderCount-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D59"  # PLC标签，不代替协议地址
+            field: "encoderCount"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: "INT32"  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "count"  # value输出单位；空字符串表示无单位
+            raw-unit: "count"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 4号绞机连续运行计时：D69，单位秒。
+          # 停机后重新计数；D66～D69相邻，实际位宽及分辨率待确认，不能擅自全部按32位读取。
+          # 后续速度使用同一连续运行段的高度差/计时差×60，不用绝对高度除以当前计时。
+          - id: "axisRunSeconds-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D69"  # PLC标签，不代替协议地址
+            field: "axisRunSeconds"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "s"  # value输出单位；空字符串表示无单位
+            raw-unit: "s"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 4号绞机第1路拉力（全系统第7路）：D36。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-7"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D36"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 7  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 4号绞机第2路拉力（全系统第8路）：D37。
+          # value=(raw-10)×0.001×101.9716，输出kg；不再使用旧D40～D47作为本批原始拉力点。
+          # PLC实际类型和固定小数编码待确认；负值不自动截成0，不重复进行N/kg换算。
+          - id: "ropeTension-8"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D37"  # PLC标签，不代替协议地址
+            field: "ropeTension"  # 采集字段标识，不是中文说明
+            index: 8  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "0.1019716"  # 换算比例，不能重复换算
+            offset: "-1.019716"  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+            rope-id: ""  # 填写本路索的实际内部编号，不得跨通道复用
+            sensor-id: ""  # 填写本路传感器的实际内部编号，不得跨通道复用
+          # 4号绞机电机力矩换算的等效拉力：D73。
+          # value=raw×0.35×163.0883/(9.80665×0.16)，输出kg；这不是力矩原始单位，也不计入两索/八索合力。
+          - id: "winchTorque-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D73"  # PLC标签，不代替协议地址
+            field: "winchTorque"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: "36.37895267497055569435026232199579"  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: "kg"  # value输出单位；空字符串表示无单位
+            raw-unit: "raw"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+
+          # ==================== 三、电机补充故障原码 ====================
+          # 1号电机使能故障补充原码：D300。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorEnableFaultCode-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D300"  # PLC标签，不代替协议地址
+            field: "motorEnableFaultCode"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 1号电机运行故障补充原码：D304。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorRunningFaultCode-1"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D304"  # PLC标签，不代替协议地址
+            field: "motorRunningFaultCode"  # 采集字段标识，不是中文说明
+            index: 1  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 2号电机使能故障补充原码：D301。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorEnableFaultCode-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D301"  # PLC标签，不代替协议地址
+            field: "motorEnableFaultCode"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 2号电机运行故障补充原码：D305。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorRunningFaultCode-2"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D305"  # PLC标签，不代替协议地址
+            field: "motorRunningFaultCode"  # 采集字段标识，不是中文说明
+            index: 2  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 3号电机使能故障补充原码：D302。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorEnableFaultCode-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D302"  # PLC标签，不代替协议地址
+            field: "motorEnableFaultCode"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 3号电机运行故障补充原码：D306。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorRunningFaultCode-3"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D306"  # PLC标签，不代替协议地址
+            field: "motorRunningFaultCode"  # 采集字段标识，不是中文说明
+            index: 3  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 4号电机使能故障补充原码：D303。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorEnableFaultCode-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D303"  # PLC标签，不代替协议地址
+            field: "motorEnableFaultCode"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+          # 4号电机运行故障补充原码：D307。
+          # 与D3对应设备故障一起保留；原码具体含义、保持/复位及类型待确认，不猜测故障说明。
+          - id: "motorRunningFaultCode-4"  # 点位唯一编号，采集文件按此编号区分来源
+            symbol: "D307"  # PLC标签，不代替协议地址
+            field: "motorRunningFaultCode"  # 采集字段标识，不是中文说明
+            index: 4  # 系统点为1；本机点为1～4；索拉力为1～8
+            enabled: false  # 核对下列接入配置后再改为true
+            address: null  # 待填写实际Modbus零基地址
+            function-code: 3  # 1=读线圈，3=读保持寄存器；以PLC映射为准
+            data-type: null  # 实际PLC存储类型，null项需确认后填写
+            byte-order: null  # 32位先通过D0/D1实测；null项需确认后填写
+            scale: 1  # 换算比例，不能重复换算
+            offset: 0  # 换算偏移
+            active-value: 1  # 位信号值等于此值时视为激活
+            invalid-value: null  # 仅填写PLC明确约定的无效码
+            unit: ""  # value输出单位；空字符串表示无单位
+            raw-unit: "code"  # PLC原值单位标记
+            winch-id: ""  # 填写该号绞机的实际内部编号，同机各点必须一致
+
+        # ==================== 四、远程写入；现场采集main不会执行本节 ====================
+        # M15为远程急停写入目标，已确认写1；不是急停状态反馈，不复用旧M2/M50。
+        emergency-stop:
+          enabled: false         # 写入单独联调，保持关闭
+          symbol: "M15"          # PLC标签，M区协议映射仍待确认
+          address: null          # 填写实际Modbus零基线圈地址
+          function-code: 5       # 写单线圈
+          data-type: BOOLEAN
+          byte-order: ABCD
+          scale: 1
+          offset: 0
+          value: 1               # 已确认的急停申请值；应答不等于机械已经停止
+
+        # 三参数的业务编码/单位需单独确认；所有写点默认关闭。
+        # D110毫秒读回、D114与设定值的关系尚待确认，未擅自生成读回映射。
+        parameters:
+          # 启动时间/启动延时：D100；先确认是一天中的时刻还是一段延时。
+          - field: "startTime"
+            symbol: "D100"
+            enabled: false
+            address: null
+            function-code: 6     # 类型确认后选择6（单寄存器）或16（多寄存器）
+            data-type: null
+            byte-order: null
+            scale: null
+            offset: 0
+            encoding: ""         # 当前编码器支持HHMM或MINUTES_OF_DAY；延时语义需另行适配
+          # 自动运行间隔：D101；需确认PLC单位和类型，不默认把毫秒当秒。
+          - field: "intervalSeconds"
+            symbol: "D101"
+            enabled: false
+            address: null
+            function-code: 6
+            data-type: null
+            byte-order: null
+            scale: null
+            offset: 0
+            encoding: ""         # 确认后填SECONDS或MILLISECONDS
+          # 整组设定速度：D102；设定值不是四台的实测速度。
+          - field: "groupSpeedMetersPerMinute"
+            symbol: "D102"
+            enabled: false
+            address: null
+            function-code: 6
+            data-type: null
+            byte-order: null
+            scale: null
+            offset: 0
+            encoding: ""         # 先核对PLC单位/倍率，再配置IDENTITY及scale

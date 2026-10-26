@@ -1,0 +1,28 @@
+# 复制到项目根目录 field-config/field-test.yml，填写后在 IDEA 中直接运行对应测试类。
+# 不需要环境变量、VM 参数或命令行 PATH。所有相对路径以项目根目录为基准。
+field:
+  device-id: plc-001
+  output-dir: field-results
+  duration-seconds: 60
+  # 历史验证/回放时，填 Capture 实际打印的目录。
+  capture-dir: ""
+  plc:
+    config: field-config/plc.yml
+  history:
+    datasource:
+      # 必须改成已准备表结构的专用测试库；测试会保留 FIELD_CAPTURE 数据。
+      url: jdbc:mysql://127.0.0.1:3306/smartwash_field_test?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      username: "admin"
+      password: "admin"
+  api:
+    base-url: http://127.0.0.1:8080
+    # 可直接填账号密码；若填 token，则优先使用 token。
+    token: ""
+    username: ""
+    password: ""
+    samples: 3
+    poll-interval-ms: 1000
+    timeout-seconds: 5
+    max-sample-age-seconds: 15
+    # 仅查询已有命令，留空则不查；不会下发设备动作。
+    request-id: ""
