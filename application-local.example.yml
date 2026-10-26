@@ -1,0 +1,17 @@
+# 复制为项目根目录的 application-local.yml，直接在文件中填写本机配置。
+# application-local.yml 已被 Git 忽略；不需要配置 PATH 或环境变量。
+spring:
+  datasource:
+    # smartwash_cloud 为示例库名，请改成你已经建立的实际数据库。
+    url: jdbc:mysql://127.0.0.1:3306/smartwash_cloud?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: ""              # 在本机application-local.yml填写实际密码，示例不保存凭据。
+
+jwt:
+  # 填写至少 32 字节的独立随机密钥，生成一次后固定保留，不能留空。
+  secret: ""
+
+# 仅启动后端不会主动连接 PLC；核对点位后再配置、启用现场采集。
+cleaning:
+  plc:
+    enabled: false

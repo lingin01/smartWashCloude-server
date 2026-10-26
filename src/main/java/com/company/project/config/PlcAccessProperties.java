@@ -11,6 +11,10 @@ import java.util.*;
 @Component
 @ConfigurationProperties(prefix = "cleaning.plc")
 public class PlcAccessProperties {
+    private static final Set<String> WINCH_FIELDS = Set.of(
+            "winchHeight", "winchSpeed", "winchTorque", "winchRunning", "winchFault", "encoderFault",
+            "winchState", "winchUp", "winchDown", "encoderCount", "axisRunSeconds",
+            "motorEnableFaultCode", "motorRunningFaultCode");
     private boolean enabled;
     private long workerIntervalMs = 50;
     private int queueCapacity = 256;
@@ -29,7 +33,9 @@ public class PlcAccessProperties {
             if (!d.enabled) continue;
             if (blank(d.id) || !ids.add(d.id)
                     || blank(d.host) || d.port < 1 || d.port > 65535 || d.unitId < 0 || d.unitId > 255
-                    || d.pollIntervalMs < 50 || d.timeoutMs < 50 || d.timeoutMs > 10000)
+                    || d.pollIntervalMs < 50 || d.timeoutMs < 50 || d.timeoutMs > 10000
+                    || d.maxReadRegisters < 1 || d.maxReadRegisters > 125
+                    || d.maxWriteRegisters < 1 || d.maxWriteRegisters > 123)
                 throw new IllegalArgumentException("PLC 连接或归属配置无效");
             Set<String> points = new HashSet<>(), fields = new HashSet<>();
             Map<Integer, String> winches = new HashMap<>();
@@ -37,12 +43,13 @@ public class PlcAccessProperties {
             for (Point p : d.points) {
                 if (!p.enabled) continue;
                 validatePoint(p, false);
+                if (p.functionCode >= 3 && p.dataType.words() > d.maxReadRegisters)
+                    throw new IllegalArgumentException("PLC 单个测点超过设备读取寄存器上限");
                 if (blank(p.id) || !points.add(p.id) || (!blank(p.field) && !fields.add(p.field + "/" + p.index)))
                     throw new IllegalArgumentException("PLC 测点或业务字段重复");
                 int count = switch (p.field == null ? "" : p.field) {
                     case "ropeTension" -> 8;
-                    case "winchHeight", "winchSpeed", "winchTorque", "winchRunning", "winchFault", "encoderFault" -> 4;
-                    default -> 1;
+                    default -> WINCH_FIELDS.contains(p.field == null ? "" : p.field) ? 4 : 1;
                 };
                 if (p.index < 1 || p.index > count) throw new IllegalArgumentException("PLC 业务测点槽位无效");
                 String unit = switch (p.field == null ? "" : p.field) {
@@ -52,14 +59,13 @@ public class PlcAccessProperties {
                     default -> "";
                 };
                 if (!unit.isEmpty() && !unit.equals(p.unit)) throw new IllegalArgumentException("测点业务单位未确认");
-                if (p.field != null && (p.field.startsWith("winch") || p.field.equals("encoderFault"))
+                if (isWinchField(p.field)
                         && blank(p.winchId)) throw new IllegalArgumentException("本机测点缺少统一业务编号");
                 if ("ropeTension".equals(p.field) && (blank(p.ropeId) || blank(p.sensorId) || blank(p.winchId)))
                     throw new IllegalArgumentException("索测点缺少统一业务编号");
                 if ("ropeTension".equals(p.field) && (!ropes.add(p.ropeId) || !sensors.add(p.sensorId)))
                     throw new IllegalArgumentException("不同索槽位不能复用同一索或传感器编号");
-                if (p.field != null && ("ropeTension".equals(p.field)
-                        || p.field.startsWith("winch") || p.field.equals("encoderFault"))) {
+                if ("ropeTension".equals(p.field) || isWinchField(p.field)) {
                     int slot = "ropeTension".equals(p.field) ? (p.index - 1) / 2 + 1 : p.index;
                     String previous = winches.putIfAbsent(slot, p.winchId);
                     if (previous != null && !previous.equals(p.winchId))
@@ -72,6 +78,8 @@ public class PlcAccessProperties {
             Set<String> parameters = new HashSet<>();
             for (Point p : d.parameters) if (p.enabled) {
                 validatePoint(p, true);
+                if (p.functionCode == 16 && p.dataType.words() > d.maxWriteRegisters)
+                    throw new IllegalArgumentException("PLC 单个参数超过设备写入寄存器上限");
                 if (!Set.of("startTime", "intervalSeconds", "groupSpeedMetersPerMinute").contains(p.field)
                         || !parameters.add(p.field) || blank(p.encoding))
                     throw new IllegalArgumentException("三参数映射或编码无效");
@@ -98,6 +106,9 @@ public class PlcAccessProperties {
     }
 
     private static boolean blank(String value) { return value == null || value.isBlank(); }
+    private static boolean isWinchField(String field) {
+        return field != null && (field.startsWith("winch") || WINCH_FIELDS.contains(field));
+    }
 
     @Data
     public static class Device {
@@ -109,6 +120,9 @@ public class PlcAccessProperties {
         private int unitId = 1;
         private long pollIntervalMs = 500;
         private int timeoutMs = 1000;
+        /** 信捷文档规定单次寄存器读写最多120个；其他设备可按实际能力分别配置。 */
+        private int maxReadRegisters = 120;
+        private int maxWriteRegisters = 120;
         /** 必须人工核对，不能根据进程重启时间生成配置版本。 */
         private Long configurationVersion;
         private List<Point> points = new ArrayList<>();

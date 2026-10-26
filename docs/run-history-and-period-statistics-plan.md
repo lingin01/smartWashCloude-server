@@ -1,5 +1,7 @@
 # 单次运行、长期历史、周期统计与曲线查询方案
 
+2026-10-26最新业务定义见[实时、M106整轮历史与历史统计](updates/2026-10-26/realtime-history-statistics-overview.md)和[统计契约](updates/2026-10-26/history-statistics-contract.md)。当前主历史整轮计次、UP仅留0.5米测量点、三种结果互斥、断联异常结束不续接；本页早期双向全流、旧M位和跨重启续接建议不再作为当前要求。
+
 > 前期背景材料：2026-10-24页面职责、公开编号和接口以[对齐说明](frontend-backend-contract-alignment.md)及[页面接口契约](external-api-contract.md)为准；不将本文件旧记录/比较建议另立为当前页面协议。
 
 > 前期材料：本轮点位与全链路以[新版统一方案](unified-plc-business-and-data-plan.md)为准。本文仅保留可靠保存和自然日历的推导背景，不单独定义新版状态、生产用途、系统工时或急停规则。

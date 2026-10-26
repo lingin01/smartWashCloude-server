@@ -23,7 +23,7 @@ public final class ModbusTcpDevice implements AutoCloseable {
     public ModbusTcpDevice(Device definition) {
         this.definition = definition;
         client = new ModbusTcpClient(definition.getHost(), definition.getPort());
-        blocks = buildReadBlocks(definition.getPoints());
+        blocks = buildReadBlocks(definition.getPoints(), definition.getMaxReadRegisters());
     }
     public String id() { return definition.getId(); }
     public boolean due(long now) { return now >= nextPollAt; }
@@ -75,6 +75,10 @@ public final class ModbusTcpDevice implements AutoCloseable {
     public PlcOperationResultBo write(PlcOperationBo operation, BooleanSupplier emergencyWaiting) {
         int confirmed = 0;
         if (!Instant.now().isBefore(operation.expiresAt())) return result(operation, false, false, 0, "COMMAND_EXPIRED");
+        // 整次操作在发包前核对设备上限，避免前几个子写已发送后才发现后续批次过大。
+        if (operation.writes().stream().anyMatch(write -> write.functionCode() == 16
+                && write.registers().size() > definition.getMaxWriteRegisters()))
+            return result(operation, false, false, 0, "PLC_WRITE_REGISTER_LIMIT_EXCEEDED");
         for (PlcOperationBo.Write write : operation.writes()) {
             if (closed || Thread.currentThread().isInterrupted())
                 return result(operation, false, confirmed > 0, confirmed, "SERVICE_STOPPED");
@@ -110,16 +114,17 @@ public final class ModbusTcpDevice implements AutoCloseable {
     private static void appendInvalid(List<PlcReadSnapshotDto.PointValue> values, List<Point> points) {
         points.forEach(p -> values.add(value(p, null, false)));
     }
-    private static List<Block> buildReadBlocks(List<Point> points) {
+    private static List<Block> buildReadBlocks(List<Point> points, int maxReadRegisters) {
         List<Point> sorted = points.stream().filter(Point::isEnabled)
                 .sorted(Comparator.comparingInt(Point::getFunctionCode).thenComparingInt(Point::getAddress)).toList();
         List<Block> result = new ArrayList<>();
         for (Point p : sorted) {
             int width = p.getFunctionCode() <= 2 ? 1 : p.getDataType().words();
+            int limit = p.getFunctionCode() <= 2 ? 2000 : maxReadRegisters;
+            if (width > limit) throw new IllegalArgumentException("PLC 单个测点超过设备读取寄存器上限");
             if (!result.isEmpty()) {
                 Block last = result.get(result.size() - 1);
                 int end = Math.max(last.address() + last.count(), p.getAddress() + width);
-                int limit = p.getFunctionCode() <= 2 ? 2000 : 125;
                 if (last.function() == p.getFunctionCode() && p.getAddress() <= last.address() + last.count()
                         && end - last.address() <= limit) {
                     List<Point> merged = new ArrayList<>(last.points()); merged.add(p);

@@ -1,12 +1,16 @@
 spring:
+  config:
+    # IDE 启动时直接读取项目根目录的本机配置；文件中的值覆盖下方示例默认值。
+    import: optional:file:./application-local.yml
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL}
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/smartwash_cloud?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:}
 
 jwt:
-  secret: ${JWT_SECRET}
+  # 本机固定密钥写在 application-local.yml；环境变量仅为可选兼容入口。
+  secret: ${JWT_SECRET:}
   expiration: 86400000
 
 # 先在目标库执行 schema.sql；当前采集链路尚未生成历史批次。

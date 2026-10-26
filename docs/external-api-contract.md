@@ -2,6 +2,8 @@
 
 > 2026-10-26实施更新：26个目标Controller方法及HTTP类型已建立，10个连接现有能力、16个业务未就绪；详见[当前接入状态](page-controller-implementation.md)。本文规定最终业务返回，不能将类型已存在理解为历史/告警/导出已可用。最新筛选依据见[本次附件](reference/page-interface-and-force-filter-20261026.md)。
 
+2026-10-26历史业务含义更新见[实时、M106整轮历史与统计](updates/2026-10-26/realtime-history-statistics-overview.md)：历史列表一次M106整轮一条，详情上行0.5米留点，M60/M61形成三种结果。本文原上行单程记录和往返关联字段需后续按新含义统一DTO，不新增第二套历史接口；本轮未改路由或代码。
+
 修订日期：2026-10-26。依据[全部页面报告](reference/frontend-pages-report-20261025.md)、[PLC告警红字说明](reference/plc-alarm-revision-20261025.md)、[10月26日筛选补充](reference/page-interface-and-force-filter-20261026.md)及[对齐决定](frontend-backend-contract-alignment.md)。本文定义页面完整业务契约；当前路由、HTTP类型和每秒首页推送已实现，历史等业务仍须接入。本次图表细则见[详情拉力对比处理说明](detail-force-comparison-processing.md)，Controller方法、DTO与服务路径见[实施清单](controller-api-specification.md)。
 
 当前Java可用状态与旧设备接口的kg/STANDBY/NON_NULL返回、命令和鉴权限制见[当前接口参考](current-api-reference.md)。以前拟议的`/api/cleaning/devices/{deviceId}/history/...`不作为页面正式目标；旧七个设备接口继续保留独立协议。
