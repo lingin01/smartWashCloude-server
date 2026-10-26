@@ -1,8 +1,10 @@
 # 页面对外接口契约：输入、返回与职责
 
-修订日期：2026-10-25。依据本次[全部页面报告](reference/frontend-pages-report-20261025.md)、[PLC告警红字说明](reference/plc-alarm-revision-20261025.md)及[对齐决定](frontend-backend-contract-alignment.md)。本文定义新的页面目标接口，不表示路由、字段、每秒完整推送或历史功能已经实现；本次图表细则见[详情拉力对比处理说明](detail-force-comparison-processing.md)，Controller方法、DTO与服务路径见[实施清单](controller-api-specification.md)。
+> 2026-10-26实施更新：26个目标Controller方法及HTTP类型已建立，10个连接现有能力、16个业务未就绪；详见[当前接入状态](page-controller-implementation.md)。本文规定最终业务返回，不能将类型已存在理解为历史/告警/导出已可用。最新筛选依据见[本次附件](reference/page-interface-and-force-filter-20261026.md)。
 
-**本页只描述目标。** 当前Java实际接口、kg/STANDBY/NON_NULL返回、命令和鉴权限制已移到[当前接口参考](current-api-reference.md)。以前拟议的`/api/cleaning/devices/{deviceId}/history/...`不再作为页面正式目标，不新增两套未来接口供前端猜选；当前七个设备接口尚未因文档修订而迁移。
+修订日期：2026-10-26。依据[全部页面报告](reference/frontend-pages-report-20261025.md)、[PLC告警红字说明](reference/plc-alarm-revision-20261025.md)、[10月26日筛选补充](reference/page-interface-and-force-filter-20261026.md)及[对齐决定](frontend-backend-contract-alignment.md)。本文定义页面完整业务契约；当前路由、HTTP类型和每秒首页推送已实现，历史等业务仍须接入。本次图表细则见[详情拉力对比处理说明](detail-force-comparison-processing.md)，Controller方法、DTO与服务路径见[实施清单](controller-api-specification.md)。
+
+当前Java可用状态与旧设备接口的kg/STANDBY/NON_NULL返回、命令和鉴权限制见[当前接口参考](current-api-reference.md)。以前拟议的`/api/cleaning/devices/{deviceId}/history/...`不作为页面正式目标；旧七个设备接口继续保留独立协议。
 
 ## 1. 通用规则与接口目录
 
@@ -30,13 +32,13 @@ API基地址为`/api`，下文`C`表示`/api/command-center`。请求统一使�
 | 五态 | 页面IDLE/RUNNING/MAINTENANCE/FAULT/OFFLINE，内部STANDBY可映射IDLE；未知为null＋statusValid=false |
 | 类型 | 公开编号、sampleKey、采集序号、配置版本为string；事件revision为正安全整数；已知数量integer，未知null；数值有效0保留 |
 
-成功业务码固定code=200，包括HTTP202表示已受理的情况；不能把当前旧接口的code=202直接用于新页面。失败使用相应非2xx HTTP及非200业务码，data.errorCode给出原因。显式null是新页面DTO的实施要求，当前全局NON_NULL尚未改变。下文返回对象均放在Result.data内，文件下载与SSE另有协议。
+成功业务码固定code=200，包括HTTP202表示已受理的情况；不能把当前旧接口的code=202直接用于新页面。失败使用相应非2xx HTTP及非200业务码，data.errorCode给出原因。新页面DTO已显式输出null；全局NON_NULL仍用于旧VO，Result.data=null也显式输出。下文返回对象均放在Result.data内，文件下载与SSE另有协议。
 
 采集数据不校验早晚、年龄、时钟偏差或是否早于上一帧，不因延迟补入拒收、丢弃或判离线。两索合计基于已确认采集帧、对象、方向、分段和有效性，由后端配对；不猜时间容差，不按相同高度拼接不同过程。
 
 ### 1.2 正式页面接口
 
-附件17个HTTP方法/路径在本后端采用下表。认证地址存在，但修订字段及保护仍需适配；其余页面地址属于待实现目标。
+附件17个HTTP方法/路径在本后端采用下表。路由和输入/返回类型现已建立，具体可用状态以实施说明为准。
 
 | 方法和地址 | 核心输入 | 返回用途 |
 |---|---|---|
@@ -106,7 +108,7 @@ notices项：`{code,message,objectType,objectCode}`，全局说明对象可null�
 
 ### 2.2 GET C/home/stream
 
-Query同一个systemCode；Header为Bearer访问令牌和Accept:text/event-stream。选择SSE沿用现有基础设施，但新地址和发送行为仍待实现。
+Query同一个systemCode；Header为Bearer访问令牌和Accept:text/event-stream。新地址及每秒完整发送已实现，沿用现有线程管理基础。
 
 先GET home，再订阅。连接成功立即发完整HomeSnapshot，之后每1秒完整发送，**同序号也发**。无新采样时updatedAt、captureId、sequence不改成当前时间，pushedAt仅说明发送；无数据仍发available=false与null。
 
@@ -310,7 +312,7 @@ recent为完整近期AlarmItem[]；目标为所有尚未明确结束事件＋最
 | referenceStartDate/referenceEndDate | SELECTED_PERIODS必填参考区间，其他由后端明确生成；右开 |
 | maxPointsPerSeries、cursor | 第1.3节预算，续读原条件 |
 
-本轮不接受附件当前含义混合的compareStart/compareEnd来猜两个区间，缺失独立边界400 RANGE_INCOMPLETE，前端须适配。period只决定图形分组（WEEK/MONTH按日，QUARTER/YEAR按月）；显式自选边界不因切period被暗改。左图与右图分别读取各自区间。
+不接受旧compareStart/compareEnd来猜两个区间，缺失独立边界400 RANGE_INCOMPLETE。10月26日附件报告前端已修复为六个明确边界；本轮Java已接收这些参数，统计查询仍未接通。period只决定图形分组（WEEK/MONTH按日，QUARTER/YEAR按月）；显式自选边界不因切period被暗改。左图与右图分别读取各自区间。
 
 返回ArchiveResponse：`{systemCode,winchCode,metric,tensionMetric,period,comparisonType,comparisonTitle,comparisonAxis,historySampleCount,changePoints,comparisonCurrent,comparisonPrevious,requestedRanges,effectiveRanges,referenceRecordCodes,dataRange,asOf,summary,statisticsState,complete,nextCursor,aggregation,notices}`。statisticsState为READY/UPDATING/NOT_BUILT；各参考条件不满足时返回可比性和原因，不伪造0。
 
@@ -446,7 +448,7 @@ files项：fileCode、fileName、mediaType、sizeBytes、dataRows、rowKind、do
 | GET /api/auth/user-info | Bearer真实账号 | {id,username,nickname,avatar,email,phone,roles,roleNames,permissions,systems,currentSystemCode} |
 | POST /api/auth/logout | Bearer当前身份，无业务body | data=null，message说明真实退出范围 |
 
-目标expiresIn为新访问令牌的有效秒数，正整数；当前Java login返回毫秒、refresh只有token，需要实际适配，不能只在文档写秒。刷新时检查真实账号状态；只有实施轮换才返回新refreshToken，否则null让前端保留原有效刷新凭据。不宣称当前logout已撤销所有JWT，真实会话撤销机制仍待实施。会话到期与采集数据时间校验没有关系。
+目标expiresIn为新访问令牌的有效秒数，正整数；本轮Java login和refresh已经返回秒及expiresInUnit=SECONDS。刷新时检查真实账号状态；只有实施轮换才返回新refreshToken，否则null让前端保留原有效刷新凭据。不宣称当前logout已撤销所有JWT，真实会话撤销机制仍待实施。会话到期与采集数据时间校验没有关系。
 
 user-info.roles为实际编码数组、roleNames为{code,name}数组，systems为授权{systemCode,systemName}；未知资料null，用户ID公开string（当前前端number类型需兼容），实际currentSystemCode或null，不硬编码QJXT-01。未认证/禁用/无权分别401/403，不继续沿用当前fallback permitAll。
 
@@ -458,7 +460,7 @@ lastLoginState=KNOWN/NEVER/UNKNOWN：只有确证从未登录才NEVER；历史�
 
 ## 10. 错误与页面调用顺序
 
-目标错误为`{code,message,data:{errorCode,...必要公开信息}}`；成功无业务对象时data=null。安全过滤器401现状仍可能无体，前端兼容。旧命令HTTP200＋REJECTED等以现有接口参考为准，此处不声称已修改。
+目标错误为`{code,message,data:{errorCode,...必要公开信息}}`；成功无业务对象时data=null。新安全过滤器401已返回JSON和data.errorCode。旧命令HTTP200＋REJECTED等以现有接口参考为准，此处不声称已修改。
 
 | HTTP | 场景 |
 |---|---|
@@ -497,4 +499,4 @@ lastLoginState=KNOWN/NEVER/UNKNOWN：只有确证从未登录才NEVER；历史�
 
 前端可做必填/数字/查询起止提示、日期单位格式化、固定样式和加载/网络/空态提醒。状态来自明确PLC事实，配对总力、统计、同比、历史结果、事件过程由后端整理返回；缺少说明时只用通用失败提示，不造业务原因。
 
-本轮仅文档。当前Java、PLC模板和七表基线未迁移；完整规则见[业务总览](business-flow-and-page-data-overview.md)、[数据库设计](database/page-driven-database-design.md)、[职责对齐](frontend-backend-contract-alignment.md)。
+本轮已实现页面Controller及部分现有能力适配；PLC模板和七表基线未迁移，历史/事件/统计/导出未就绪状态见实施说明。完整规则见[业务总览](business-flow-and-page-data-overview.md)、[数据库设计](database/page-driven-database-design.md)、[职责对齐](frontend-backend-contract-alignment.md)。

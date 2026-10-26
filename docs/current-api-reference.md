@@ -1,10 +1,8 @@
 # 当前已实现接口参考
 
-核对日期：2026-10-24。本文单独保留当前Java实现的真实行为。新版页面目标以[对外接口说明](external-api-contract.md)和[前后端修订对齐说明](frontend-backend-contract-alignment.md)为准；本轮仅改文档，当前Controller、VO、序列化和权限配置尚未迁移。
+核对日期：2026-10-26。新页面26个目标方法的路由已实现，逐项业务可用状态见[Controller实现与接入状态](page-controller-implementation.md)。本文第1节保留旧设备接口真实行为；账号接口已按新版适配。最终页面契约见[对外接口说明](external-api-contract.md)。
 
-2026-10-25再次核对：当前仍为7个清洗、4个认证和6个管理员方法。新页面Controller清单见[实施说明](controller-api-specification.md)。本页login的expiresIn仍按实际代码记毫秒、旧写回执body.code仍随HTTP；新契约要求秒及成功业务code=200，两者是待实施差异，不是本轮已修改。
-
-当前清洗前缀记为`B = /api/cleaning/devices/{deviceId}`。接口使用Bearer访问令牌；GET无请求体，POST/PUT使用JSON。当前Result为`{code,message,data?}`，成功通常200；Jackson配置NON_NULL，可空字段通常省略。安全过滤器拒绝的401可没有JSON响应体。当前测量单位kg、m、m/min，Instant时间通常序列化为UTC的Z。
+当前清洗前缀记为`B = /api/cleaning/devices/{deviceId}`。接口使用Bearer访问令牌；GET无请求体，POST/PUT使用JSON。Result为`{code,message,data}`，data=null也输出；旧VO仍沿用NON_NULL而新页面VO显式输出可空字段。安全过滤器401现返回JSON及data.errorCode。当前测量单位kg、m、m/min，Instant时间通常序列化为UTC的Z。
 
 当前deviceId格式为`[A-Za-z0-9._-]{1,64}`。读取权限device:read，写入权限device:write；实际账号需启用，但尚无逐设备授权名单。格式合法的未知deviceId通常得到无实时快照、空PROCESS统计或未同步参数，而非统一404。
 
@@ -199,7 +197,7 @@ UNCONFIRMED不是终态，后续仍可能收到可关联结果并推进状态；
 | POST/PUT的SEND_QUEUE_FULL | 429，data仍包含Command |
 | POST/PUT其他终态或UNCONFIRMED | 200；版本冲突、已有在途参数可能是200＋REJECTED，不是409 |
 | 必要参数规则触发IllegalArgumentException | 400；同requestId内容冲突也在这里 |
-| 未登录/无效访问令牌 | 401；安全过滤器可返回空响应体，不保证Result包装 |
+| 未登录/无效访问令牌 | 401；安全过滤器返回JSON及data.errorCode=UNAUTHENTICATED |
 | 当前账号无权限 | 通常403；进入业务异常处理时为Result错误 |
 | 未找到命令/未实现路由 | 404 |
 | 未分类错误 | 500；当前坏JSON/缺请求体没有统一400处理，不承诺所有格式错误已规范化 |
@@ -208,27 +206,19 @@ UNCONFIRMED不是终态，后续仍可能收到可关联结果并推进状态；
 
 ## 2. 认证与账号接口现状
 
-### 2.1 认证
+### 2.1 认证和只读用户页
 
-以下现有接口沿用Result包装；只说明真实行为，不引入新的登录机制。
-
-| 方法/地址 | 输入 | 成功data |
+| 方法/地址 | 输入 | 当前成功data |
 |---|---|---|
-| `POST /api/auth/login` | JSON：`username:string、password:string` | `{token:string,refreshToken:string,expiresIn:integer}` |
-| `POST /api/auth/refresh` | JSON：`refreshToken:string` | `{token:string}`；不返回新刷新令牌或expiresIn |
-| `GET /api/auth/user-info` | 无请求体，客户端携带访问令牌 | `id:number、username、nickname?、avatar?、email?、phone?、roles:string[]、permissions:string[]` |
-| `POST /api/auth/logout` | 无请求体 | 无data，成功code/message |
+| POST `/api/auth/login` | username、password | token、refreshToken、expiresIn、expiresInUnit=SECONDS |
+| POST `/api/auth/refresh` | refreshToken | 新token、refreshToken=null、expiresIn、expiresInUnit=SECONDS |
+| GET `/api/auth/user-info` | Bearer访问令牌 | id为string、资料、roles/roleNames、permissions、授权systems和currentSystemCode |
+| POST `/api/auth/logout` | Bearer访问令牌 | null；message说明清除本地令牌及当前退出范围 |
+| GET `/api/users` | keyword、page=1、pageSize=10（最大100） | list、total、page、pageSize、asOf；须user:read |
 
-`expiresIn`当前直接返回配置的有效期，**单位为毫秒**，不是秒。nickname来自账号realName。示例请求只用占位值，不在文档放真实账号或令牌：
+login和refresh的expiresIn均为秒。刷新凭据无效401，账号缺失401、禁用403；没有实施刷新凭据轮换，返回null表示保留原有效刷新凭据。logout只清除本次认证上下文并提示客户端清理令牌，已签发JWT到期前仍有效，不宣称已服务器端撤销。
 
-```json
-{
-  "username": "example-user",
-  "password": "example-password"
-}
-```
-
-登录凭据错误通常HTTP 401；refresh无效或用户不存在400。当前refresh没有完成禁用账号检查/轮换机制，logout只清除本请求SecurityContext，没有服务器端撤销已发JWT；客户端仍应清理本地令牌。user-info未完整统一未登录处理，不能承诺其所有未登录情况都返回401。
+用户上下文和只读列表检查实际启用账号及当前权限。授权系统来自明确的外部页面映射，未配置时systems=[]，不生成示例系统。用户列表不返回密码；缺少登录历史时lastLoginAt=null且lastLoginState=UNKNOWN。用户创建时间按业务时区Asia/Shanghai输出，旧库原时间语义须在迁移时核实。
 
 ### 2.2 账号管理
 
@@ -247,4 +237,4 @@ User对外资料字段：`id:number、username:string、realName?:string、phone
 
 创建时实际需要提供`username`和明文`password`，服务端加密后保存；可编辑资料为realName、phone、email、avatar、status、roleCode。status约定0禁用/1启用，角色约定ADMIN/OPERATOR/VIEWER，标准新库默认启用和VIEWER。id、创建/更新时间、deleted由服务端管理，前端不用于创建输入；当前实体直收尚未形成完整字段校验，不能承诺所有缺失/非法值都规范返回400。
 
-当前安全配置仅对`/api/cleaning/**`强制认证，其他路径fallback为permitAll，UserController/Service也没有完整管理员权限检查。因此这些路由“存在”不代表账号管理权限已经闭环，不将其当成已验收的全站管理接口。本轮不更改账号代码。
+新页面、认证私有入口、只读用户列表和旧清洗入口均已强制认证；旧`/api/admin/user/**`仍在fallback范围，UserController/Service没有完整管理员权限检查。因此这些路由“存在”不代表账号管理权限已经闭环，不将其当成已验收的全站管理接口。本轮新增只读页面入口与认证适配，没有完成旧管理员CRUD的授权迁移。

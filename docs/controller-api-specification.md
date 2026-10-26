@@ -1,8 +1,8 @@
 # Controller 接口实施清单：17 个页面入口与 9 个补充入口
 
-修订日期：2026-10-25。依据两份最新附件及[页面接口主规范](external-api-contract.md)，列出 Controller 的方法、输入、输出、权限和服务调用路径。本文是可实施的接口清单，**本轮没有新增 Java Controller、DTO、数据库表或 PLC 写入能力**。
+修订日期：2026-10-26。依据两份最新附件及[页面接口主规范](external-api-contract.md)，列出 Controller 的方法、输入、输出、权限和服务调用路径。26个方法的Java路由和类型已实现；[实际接入状态](page-controller-implementation.md)列出10个连接现有能力的方法和16个业务未就绪方法。当前没有新增历史表或PLC写点。
 
-当前代码行为见[现有接口参考](current-api-reference.md)。页面与 PLC 事件分工见[告警和阈值处理说明](plc-alarm-and-threshold-processing.md)，图表范围见[详情拉力对比处理说明](detail-force-comparison-processing.md)。字段的最终名称、空值与枚举以主规范为准；下列 Java 类型名是拟议名称，不表示仓库已有这些类。
+当前代码行为见[现有接口参考](current-api-reference.md)。页面与 PLC 事件分工见[告警和阈值处理说明](plc-alarm-and-threshold-processing.md)，图表范围见[详情拉力对比处理说明](detail-force-comparison-processing.md)。字段的最终名称、空值与枚举以主规范为准；下列类型现已集中在PageRequests/PageResponses及账号DTO/VO中；最终服务路径仍是后续业务接入要求。
 
 ## 1. 统一边界
 
@@ -23,39 +23,39 @@ Controller 只接收 HTTP 对象并交给表示层。表示层完成 DTO/业务�
 | 采集 | 不以采样时间先后、年龄或时钟偏差拒收、丢弃或判离线；必要查询格式校验不等于采集时间校验 |
 | 列表 | 页码从1开始；普通页面默认10、最大100，导出任务默认20；不能把本页长度当全量total |
 
-当前 `SecurityConfig` 只强制保护 `/api/cleaning/**`，其他地址仍有 permitAll 回退。新增这些方法时必须同步完成新路径鉴权和统一错误响应，不能只添加路由。当前清洗写接口将HTTP码同时写入Result.code；目标成功包装需显式适配新前端的code=200规则。
+当前SecurityConfig已保护新版页面、认证私有入口及只读用户列表；旧管理员CRUD仍待独立授权完善。新页面成功业务码固定200，旧清洗写接口保持原包装。
 
-## 2. AuthController：已有地址，响应与保护待适配
+## 2. AuthController：已完成页面响应和入口保护
 
-认证不经过清洗/命令业务链路。下列四个地址在现有Java中存在，但目标行为尚未全部实现。
+认证不经过清洗/命令业务链路。下列四个地址已适配真实账号检查及类型化响应；JWT服务端撤销仍未实施。
 
 | 编号 | 方法/地址 | 拟议Java方法与输入 | 响应DTO | 权限与调用 | 状态 |
 |---|---|---|---|---|---|
-| P01 | POST `/api/auth/login` | `login(LoginRequest)`；username、password | `Result<TokenResponse>` | 公共登录入口→账号服务→令牌签发 | 已有地址；有效期单位和失败回执待适配 |
-| P02 | GET `/api/auth/user-info` | `userInfo(Authentication)`；无业务参数 | `Result<UserInfoResponse>` | 有效账号→账号资料/角色/授权系统查询 | 已有地址；授权系统上下文及保护待补 |
-| P03 | POST `/api/auth/logout` | `logout(Authentication)`；无业务参数 | `Result<Void>` | 有效账号→真实会话退出处理 | 已有地址；不可宣称已撤销所有JWT |
-| P04 | POST `/api/auth/refresh` | `refresh(RefreshRequest)`；refreshToken | `Result<TokenResponse>` | 有效刷新凭据→真实账号状态→令牌服务 | 已有地址；禁用检查、有效期与轮换约定待补 |
+| P01 | POST `/api/auth/login` | `login(LoginRequest)`；username、password | `Result<TokenResponse>` | 公共登录入口→账号服务→令牌签发 | 已适配秒有效期及类型化输入 |
+| P02 | GET `/api/auth/user-info` | `userInfo(Authentication)`；无业务参数 | `Result<UserInfoResponse>` | 有效账号→账号资料/角色/授权系统查询 | 已读取真实账号/授权映射 |
+| P03 | POST `/api/auth/logout` | `logout(Authentication)`；无业务参数 | `Result<Void>` | 有效账号→真实会话退出处理 | 已说明仅客户端退出，服务端撤销未实施 |
+| P04 | POST `/api/auth/refresh` | `refresh(RefreshRequest)`；refreshToken | `Result<TokenResponse>` | 有效刷新凭据→真实账号状态→令牌服务 | 已检查禁用账号、返回秒有效期 |
 
-`TokenResponse`包含token、expiresIn及真实返回的refreshToken。**目标expiresIn以秒计**；现有login直接返回配置毫秒，现有refresh只返回token，两者需要明确迁移，不能仅修改文档解释。只有实际实施轮换才返回新的refreshToken，不宣称当前已轮换。
+`TokenResponse`包含token、expiresIn及真实返回的refreshToken。**现有login和refresh的expiresIn已统一为秒**，expiresInUnit=SECONDS。只有实际实施轮换才返回新的refreshToken，不宣称当前已轮换。
 
 `UserInfoResponse`包含id、username、nickname、avatar、email、phone、roles、permissions、systems、currentSystemCode。systems为实际授权`{systemCode,systemName}`，单系统也不能在浏览器固定套编号。缺失资料及系统选择如实返回；无资料来源不生成演示用户。
 
 ## 3. CommandCenterController：10 个页面方法
 
-该 Controller 是目标页面入口。以下地址均尚未存在于当前Java；旧 `CleaningController` 的急停、设置和实时方法只能作为内部能力参考，不能当成同地址已经实现。
+该 Controller 是目标页面入口。以下路由、输入和返回类型已存在。首页和急停连接既有能力，其余按[接入状态](page-controller-implementation.md)明确返回未就绪；旧CleaningController继续保留独立协议。
 
 | 编号 | 方法/地址 | 拟议Java方法与输入DTO | 响应DTO | 权限 | 服务路径与状态 |
 |---|---|---|---|---|---|
-| P05 | GET `C/home` | `home(SystemQuery)` | `Result<HomeSnapshot>` | device:read | 表示层→大厅→安全→清洗快照；待实施 |
-| P06 | POST `C/emergency-stop` | `emergencyStop(EmergencyStopRequest)` | HTTP202 `Result<CommandReceipt>`，或明确拒绝/失败 | device:write | 大厅→安全→清洗操作编排→命令入队；待新增页面适配 |
-| P07 | GET `C/winch/detail` | `winchDetail(WinchQuery)` | `Result<WinchDetailResponse>` | device:read | 大厅→安全→清洗→设备配置/统计查询；待实施 |
-| P08 | GET `C/winch/tension/trend` | `winchTrend(WinchTrendQuery)` | `Result<WinchTrendResponse>` | device:read | 大厅→安全→清洗→统计查询/来源关联；待实施 |
-| P09 | PUT `C/winch/tension-thresholds` | `updateThresholds(ThresholdUpdateRequest)` | `Result<ThresholdApplyResponse>`；PENDING或APPLIED | device:write | 大厅→安全→清洗配置编排→命令→PLC结果；待实施，不能预填点位 |
-| P10 | GET `C/archive` | `archive(ArchiveQuery)` | `Result<ArchiveResponse>` | device:read | 大厅→安全→清洗→统计预计算查询；待实施 |
-| P11 | GET `C/history/list` | `historyList(RunListQuery)` | `Result<RunListResponse>` | device:read | 大厅→安全→清洗→统计系统运行分页；待实施 |
-| P12 | GET `C/history/detail` | `historyDetail(RunDetailQuery)` | `Result<RunDetailResponse>` | device:read | 大厅→安全→清洗→统计运行/采样/事件查询；待实施 |
-| P13 | GET `C/parameter-settings` | `parameterSettings(SystemQuery)` | `Result<ParameterSettingsResponse>` | device:read | 大厅→安全→清洗已保存/已生效配置；待新增页面适配及持久化 |
-| P14 | PUT `C/parameter-settings` | `updateParameters(ParameterUpdateRequest)` | `Result<ParameterSettingsResponse>`及命令阶段 | device:write | 大厅→安全→清洗配置编排→命令；待新增页面适配及生效闭环 |
+| P05 | GET `C/home` | `home(SystemQuery)` | `Result<HomeSnapshot>` | device:read | 大厅→安全→清洗快照；已接入 |
+| P06 | POST `C/emergency-stop` | `emergencyStop(EmergencyStopRequest)` | HTTP202 `Result<CommandReceipt>`，或明确拒绝/失败 | device:write | 大厅→安全→清洗编排→命令入队；已适配 |
+| P07 | GET `C/winch/detail` | `winchDetail(WinchQuery)` | `Result<WinchDetailResponse>` | device:read | 入口已实现；409 CONFIGURATION_NOT_READY |
+| P08 | GET `C/winch/tension/trend` | `winchTrend(WinchTrendQuery)` | `Result<WinchTrendResponse>` | device:read | 入口已实现；503 HISTORY_NOT_READY |
+| P09 | PUT `C/winch/tension-thresholds` | `updateThresholds(ThresholdUpdateRequest)` | `Result<ThresholdApplyResponse>`；PENDING或APPLIED | device:write | 入口已实现；503 THRESHOLD_MAPPING_NOT_READY |
+| P10 | GET `C/archive` | `archive(ArchiveQuery)` | `Result<ArchiveResponse>` | device:read | 入口已实现；503 STATISTICS_NOT_READY |
+| P11 | GET `C/history/list` | `historyList(RunListQuery)` | `Result<RunListResponse>` | device:read | 入口已实现；503 HISTORY_NOT_READY |
+| P12 | GET `C/history/detail` | `historyDetail(RunDetailQuery)` | `Result<RunDetailResponse>` | device:read | 入口已实现；503 HISTORY_NOT_READY |
+| P13 | GET `C/parameter-settings` | `parameterSettings(SystemQuery)` | `Result<ParameterSettingsResponse>` | device:read | 已读取同步状态；保存/生效值未确认 |
+| P14 | PUT `C/parameter-settings` | `updateParameters(ParameterUpdateRequest)` | `Result<ParameterSettingsResponse>`及命令阶段 | device:write | 入口已实现；409 CONFIGURATION_NOT_READY |
 
 ### 3.1 输入DTO应包含的字段
 
@@ -99,10 +99,10 @@ requestId/expectedVersion是必要技术字段，新附件前端写请求尚未�
 
 | 编号 | 方法/地址 | 拟议Java方法与输入DTO | 响应DTO | 权限 | 服务路径与状态 |
 |---|---|---|---|---|---|
-| P15 | GET `C/alarms/latest` | `latestAlarms(LatestAlarmQuery)` | `Result<LatestAlarmResponse>` | alarm:read | 大厅→安全→清洗→统计最新事件快照；待实施 |
-| P16 | GET `C/alarms/history` | `alarmHistory(AlarmHistoryQuery)` | `Result<AlarmHistoryResponse>` | alarm:read | 大厅→安全→清洗→统计历史筛选分页；待实施 |
-| S04 | GET `C/events/history` | `eventHistory(EventHistoryQuery)` | `Result<EventHistoryResponse>` | alarm:read | 大厅→安全→清洗→统计全部真实事件查询；待实施 |
-| S05 | GET `C/events/{eventCode}` | `eventDetail(String eventCode, SystemQuery)` | `Result<EventDetailResponse>` | alarm:read | 大厅→安全→清洗→统计事件与有限快照；待实施，只读 |
+| P15 | GET `C/alarms/latest` | `latest(LatestAlarmQuery)` | `Result<LatestAlarmResponse>` | alarm:read | 入口已实现；503 EVENTS_NOT_READY |
+| P16 | GET `C/alarms/history` | `history(AlarmHistoryQuery)` | `Result<AlarmHistoryResponse>` | alarm:read | 入口已实现；503 EVENTS_NOT_READY |
+| S04 | GET `C/events/history` | `events(EventHistoryQuery)` | `Result<EventHistoryResponse>` | alarm:read | 入口已实现；503 EVENTS_NOT_READY |
+| S05 | GET `C/events/{eventCode}` | `event(String eventCode, SystemQuery)` | `Result<EventDetailResponse>` | alarm:read | 入口已实现；503 EVENTS_NOT_READY |
 
 | DTO | 输入或返回内容 |
 |---|---|
@@ -126,7 +126,7 @@ recent和hasAttention由同一后端事实快照产生；前端网络失败、�
 
 | 编号 | 方法/地址 | 拟议Java方法与输入 | 响应DTO | 权限与调用 | 状态 |
 |---|---|---|---|---|---|
-| P17 | GET `/api/users` | `users(UserListQuery)`；keyword、page、pageSize | `Result<UserListResponse>` | user:read→实际账号权限→账号服务查询 | 待新增；旧`/api/admin/user/page`不是该契约 |
+| P17 | GET `/api/users` | `users(UserListQuery)`；keyword、page、pageSize | `Result<UserListResponse>` | user:read→实际账号权限→账号服务查询 | 已实现只读分页、实际权限和UNKNOWN登录历史 |
 
 `UserListResponse={list,total,page,pageSize}`，行按新页面包含id、username、nickname、roles、lastLoginAt、createdAt及后端角色文字/可用性说明。关键词由后端按账号、姓名、角色筛选并稳定排序；密码/哈希不进入响应。最近登录缺乏记录不等于从未登录，必须区分“未知”和“确认从未登录”，不能照搬前端null文案补造事实。当前账号表没有形成该登录历史闭环。
 
@@ -136,11 +136,11 @@ recent和hasAttention由同一后端事实快照产生；前端网络失败、�
 
 | 编号 | 方法/地址 | 拟议Java方法与输入 | 响应DTO/协议 | 权限 | 服务路径与状态 |
 |---|---|---|---|---|---|
-| S01 | GET `C/home/stream` | `homeStream(SystemQuery, Authentication)` | `SseEmitter`，event=home、每条为`Result<HomeSnapshot>` | device:read，连接期保持实际账号检查 | 大厅→安全→清洗快照→表示层推送；待新增页面通道 |
-| S02 | GET `C/commands/{commandCode}` | `command(String commandCode, SystemQuery)` | `Result<CommandReceipt>` | device:read及实际系统/命令归属 | 大厅→安全→清洗→命令查询；待新增commandCode查找 |
-| S03 | GET `C/history/point` | `historyPoint(SamplePointQuery)`；systemCode、recordCode、sampleKey，可选winchCode | `Result<SamplePointResponse>` | device:read | 大厅→安全→清洗→统计真实帧/事件点读取；待实施 |
+| S01 | GET `C/home/stream` | `homeStream(SystemQuery, Authentication)` | `SseEmitter`，event=home、每条为`Result<HomeSnapshot>` | device:read，连接期保持实际账号检查 | 大厅→安全→清洗快照；已实现每秒完整推送 |
+| S02 | GET `C/commands/{commandCode}` | `command(String commandCode, SystemQuery)` | `Result<CommandReceipt>` | device:read及实际系统/命令归属 | 已按真实commandCode及系统查询 |
+| S03 | GET `C/history/point` | `historyPoint(SamplePointQuery)`；systemCode、recordCode、sampleKey，可选winchCode | `Result<SamplePointResponse>` | device:read | 入口已实现；503 HISTORY_NOT_READY |
 
-首页先HTTP快照再SSE，目标每秒完整发送，同采样序号也发送，但不得修改实际采样时间。当前旧SSE同序号只保活，不能视为目标已完成。命令查询不把写应答翻译成现场停止/参数生效。
+首页先HTTP快照再SSE，新页面已每秒完整发送，同采样序号也发送，保留实际采样时间。旧设备SSE仍同序号只保活，两条通道各自保留。命令查询不把写应答翻译成现场停止/参数生效。
 
 `SamplePointResponse`包含systemCode、recordCode、sampleKey、真实sampleFrameId/time、按实际winch关联的来源读数、质量及说明。平均高度桶没有真实帧，不调用本接口伪造采样。历史当前设备/光标选择不能替换成此刻实时读数。
 
@@ -150,10 +150,10 @@ recent和hasAttention由同一后端事实快照产生；前端网络失败、�
 
 | 编号 | 方法/地址 | 拟议Java方法与输入 | 响应DTO/协议 | 权限 | 服务路径与状态 |
 |---|---|---|---|---|---|
-| S06 | POST `C/exports` | `createExport(ExportCreateRequest)` | HTTP202 `Result<ExportTaskResponse>` | 对应数据读取权限及系统归属 | 大厅→安全→清洗→统计创建任务；待实施 |
-| S07 | GET `C/exports` | `exports(ExportListQuery)` | `Result<ExportListResponse>` | 登录、系统及创建者归属 | 大厅→安全→清洗→统计任务分页；待实施 |
-| S08 | GET `C/exports/{taskCode}` | `exportTask(String taskCode, SystemQuery)` | `Result<ExportTaskResponse>` | 对应读取权限、系统及创建者归属 | 大厅→安全→清洗→统计任务读取；待实施 |
-| S09 | GET `C/exports/{taskCode}/files/{fileCode}` | `download(String taskCode, String fileCode, SystemQuery)` | 完整发布的CSV/ZIP流；成功不套JSON | 对应读取权限、系统及创建者归属 | 大厅→安全→清洗→统计定位文件→表示层流式下载；待实施 |
+| S06 | POST `C/exports` | `create(ExportCreateRequest)` | HTTP202 `Result<ExportTaskResponse>` | 对应数据读取权限及系统归属 | 入口已实现；503 EXPORT_NOT_READY |
+| S07 | GET `C/exports` | `list(ExportListQuery)` | `Result<ExportListResponse>` | 登录、系统及创建者归属 | 入口已实现；503 EXPORT_NOT_READY |
+| S08 | GET `C/exports/{taskCode}` | `task(String taskCode, SystemQuery)` | `Result<ExportTaskResponse>` | 对应读取权限、系统及创建者归属 | 入口已实现；503 EXPORT_NOT_READY |
+| S09 | GET `C/exports/{taskCode}/files/{fileCode}` | `download(String taskCode, String fileCode, SystemQuery)` | 完整发布的CSV/ZIP流；成功不套JSON | 对应读取权限、系统及创建者归属 | 入口已实现；503 EXPORT_NOT_READY |
 
 `ExportCreateRequest`包含systemCode、exportType、unit和已提交筛选范围或选中编号：RUN_LIST运行范围/recordCodes，RUN_SAMPLES运行/采集范围，EXCEPTIONS事件范围/eventCodes，PERIOD_STATISTICS周期/设备范围。范围与编号选择互斥，不提交SQL、物理表名或页面page。EXCEPTIONS要求alarm:read，其余要求device:read；任务读取/下载继续检查相应源数据权限，不能凭任务编号绕过。
 
@@ -161,7 +161,7 @@ recent和hasAttention由同一后端事实快照产生；前端网络失败、�
 
 ## 8. 实施时的交付检查
 
-本清单共 **P01～P17共17个页面方法，S01～S09共9个补充方法，总计26个方法/路径组合**。其中只有4个Auth地址已有当前Java实现；目标字段、单位与保护仍需适配，其余22个目标路径未实现。
+本清单共 **P01～P17共17个页面方法，S01～S09共9个补充方法，总计26个方法/路径组合**，路由和HTTP类型均已建立。10个方法连接现有能力，16个保留明确未就绪响应；具体业务接通情况以[当前实现说明](page-controller-implementation.md)为准。
 
 每个方法完成时应同时核对：请求DTO和响应DTO、所属系统授权、业务服务入口、真实存储/采集来源、错误/未就绪回执、必要分页/响应预算。Controller不要直接查DAO、比较拉力判断事件、识别运行结果或操作PLC缓冲。
 

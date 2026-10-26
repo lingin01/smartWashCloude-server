@@ -3,6 +3,7 @@ package com.company.project.domain;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 @Data
 @NoArgsConstructor
@@ -10,6 +11,7 @@ import lombok.NoArgsConstructor;
 public class Result<T> {
     private int code;
     private String message;
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     private T data;
 
     public static <T> Result<T> success(T data) {

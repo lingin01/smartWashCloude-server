@@ -52,6 +52,10 @@ public class CleaningLobbyServiceImpl implements CleaningLobbyService {
         safety.verifyRead(context);
         return cleaning.operation(context.deviceId(), requestId);
     }
+    @Override public Optional<CleaningCommandStatusBo> queryOperationByCommandCode(CleaningOperationContext context, String commandCode) {
+        safety.verifyRead(context);
+        return cleaning.operationByCommandCode(context.deviceId(), commandCode);
+    }
     @Override public void acceptDeviceSnapshot(com.company.project.domain.bo.plc.PlcDeviceSnapshotBo snapshot) {
         cleaning.acceptDeviceSnapshot(snapshot);
     }
@@ -64,5 +68,15 @@ public class CleaningLobbyServiceImpl implements CleaningLobbyService {
     @Override public com.company.project.domain.bo.statistics.CleaningStatisticsBo queryStatistics(CleaningOperationContext context) {
         safety.verifyRead(context);
         return statistics.statistics(context.deviceId());
+    }
+    @Override public com.company.project.domain.bo.page.PageSystemBo pageSystem(CleaningOperationContext context,
+            String systemCode, String permission) {
+        safety.verifyPagePermission(context, permission);
+        var system = cleaning.pageSystem(systemCode);
+        safety.verifyPageSystem(context, system);
+        return system;
+    }
+    @Override public java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems(CleaningOperationContext context) {
+        return cleaning.pageSystems().stream().filter(system -> safety.canReadPageSystem(context, system)).toList();
     }
 }

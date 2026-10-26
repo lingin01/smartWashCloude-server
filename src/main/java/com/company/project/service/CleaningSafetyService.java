@@ -7,4 +7,7 @@ public interface CleaningSafetyService {
     void verifyRead(CleaningOperationContext context);
     void verifyEmergencyStop(CleaningOperationContext context);
     void verifySettingsChange(CleaningOperationContext context);
+    void verifyPagePermission(CleaningOperationContext context, String permission);
+    void verifyPageSystem(CleaningOperationContext context, com.company.project.domain.bo.page.PageSystemBo system);
+    boolean canReadPageSystem(CleaningOperationContext context, com.company.project.domain.bo.page.PageSystemBo system);
 }

@@ -1,10 +1,10 @@
 # 当前系统完成情况、未完成项与实施顺序
 
-核对日期：2026-10-25。代码基线：`587c672`。依据当前Java、配置、建表脚本及已确定的[业务方案](business-flow-and-page-data-overview.md)、[接口规范](external-api-contract.md)和[Controller清单](controller-api-specification.md)。
+核对日期：2026-10-26。已包含本轮页面Controller实现；上一份仅文档基线为`085f019`。依据当前Java、配置、建表脚本及已确定的[业务方案](business-flow-and-page-data-overview.md)、[接口规范](external-api-contract.md)和[Controller清单](controller-api-specification.md)。
 
-**当前已有通信、业务分层和部分读写基础；“采集→识别一次运行→可靠保存→历史展示→周期统计”的完整生产流程尚未接通。** 最近的提交主要完善了文档，没有同步实现新Controller、数据库迁移或PLC事件状态机。
+**当前已有通信、业务分层和部分读写基础；“采集→识别一次运行→可靠保存→历史展示→周期统计”的完整生产流程尚未接通。** 本轮已实现26个目标Controller方法及部分现有能力适配，数据库迁移和PLC事件状态机仍未实施。逐项响应见[Controller接入状态](page-controller-implementation.md)。
 
-本文区分仓库实现、目标设计和现场确认。未连接实际PLC或生产数据库，不据默认配置推断现场一定没有接入；前端现状来自用户附件，不将其模拟测试当成本仓库后端或现场验收。本轮没有重新运行后端测试，已有测试文件不能被表述成“没有测试”。
+本文区分仓库实现、目标设计和现场确认。未连接实际PLC或生产数据库，不据默认配置推断现场一定没有接入；前端现状来自用户附件，不将其模拟测试当成本仓库后端或现场验收。本轮已执行后端构建与自动化测试；测试覆盖HTTP和已有业务，不代替真实PLC与新历史业务验收。
 
 ## 1. 已有的基础能力
 
@@ -13,11 +13,11 @@
 | 业务分层 | 大厅入口及清洗、命令、安全、统计四模块，门面委派内部辅助类 | 有实际实现，不是空接口；具体生产记录、事件和历史查询仍需补齐，见[架构](architecture.md) |
 | PLC通信 | Modbus TCP客户端、读写编码、采集入口和缓冲 | 新点位、真实地址/编码与现场联调不能仅凭组件存在认定完成，见[PLC接入](plc.md) |
 | 实时状态 | 采集转换、最新状态保存、实时查询 | [清洗服务](../src/main/java/com/company/project/service/cleaning/CleaningServiceImpl.java)目前更新快照并累计进程样本，未自动产生一次运行历史 |
-| SSE | 初次快照和新序号推送、连接管理 | [推送实现](../src/main/java/com/company/project/presentation/web/RealtimePushPresentation.java)同序号只保活，尚不是新页面每秒完整首页对象 |
+| SSE | 新首页每秒完整快照、同序号重发及连接管理 | 新[首页推送](../src/main/java/com/company/project/presentation/web/HomeStreamPresentation.java)保留采样时刻；旧设备SSE仍同序号只保活 |
 | 命令基础 | 急停/三参数请求登记、队列、写结果与本地状态 | 写应答不等于现场停止/参数生效；幂等与命令状态主要在进程内，见[当前接口参考](current-api-reference.md) |
 | 统计基础 | 已接收样本的有效数量、和、均值与极值 | [SampleStatistics](../src/main/java/com/company/project/service/statistics/SampleStatistics.java)为PROCESS范围，不能当单次、今日或累计历史统计 |
 | 旧历史保存 | 已整理批次、分段和测点摘要的事务写入、批次去重、失败重试 | [保存器](../src/main/java/com/company/project/service/statistics/HistoryBatchPersistence.java)接收的是已整理批次，实时自动整理链路尚缺 |
-| 认证与账号 | 登录、令牌、用户资料及旧管理员接口 | 已有清洗读写权限处理，新路径、用户管理保护及新前端响应仍需适配 |
+| 认证与账号 | 登录、令牌、用户资料及旧管理员接口 | 新路径鉴权、实际账号检查、秒有效期和只读用户列表已适配；旧管理员CRUD及JWT撤销仍待完善 |
 
 ## 2. 当前最关键的缺口：运行与数据保存
 
@@ -49,7 +49,7 @@ PLC采集 → 转换最新快照 → 清洗服务状态 → 进程样本统计 /
 | 一次运行识别 | 识别开始、结束、终止与未确认；生产/恢复/检修UP分段；记录号与真实参数快照 | 四台同步仍一条系统记录，恢复UP不新增生产次数，未知边界不冒充已完成 |
 | 原始与异常可靠保存 | UP采样归档、DOWN有限事件点、持久缓冲、事务、重放确认及重启恢复 | 数据库暂不可用后可继续保存已持久接收数据，不因重试重复计数或静默丢弃 |
 | 目标数据库迁移 | 实施运行、UP原始、事件、分日摘要、周期、高度桶及导出任务结构和索引 | 真实迁移经过审阅与验证；不是将几份不同时期SQL直接混跑 |
-| 首页与设备详情 | 新页面DTO、systemCode映射、IDLE/t/null适配、真实名称/来源；每秒完整首页推送 | 首页、详情使用同一权威事实；旧采样发送时不伪造采样时间，详情按需查询 |
+| 首页与设备详情 | 首页DTO、映射和每秒推送已实现；仍需新点位事实与真实已生效配置、单机详情业务 | 首页、详情使用同一权威事实；旧采样发送时不伪造采样时间，详情按需查询 |
 | 历史列表和详情 | 系统分页、独立日期目录、运行结果/参数、八路单绳极值、原始点续读 | 列表不查全量曲线，完整点表分批读完；系统极值不随选中设备或图例改变 |
 | 图表数据处理 | sampleKey、来源关系、分段/质量、动力页ROPE_TOTAL和周期高度平均 | 重复高度不串样；后端计算两索合计，历史页仅两单绳/独立伺服三类来源 |
 | 周期统计与归档 | 日/月/季/半年/年预计算、实际范围合并、跨日归属、迟到修正及比较 | 历史月查询读取持久结果，不每次扫原始全月；无依据时长/同比不填0 |
@@ -57,30 +57,24 @@ PLC采集 → 转换最新快照 → 清洗服务状态 → 进程样本统计 /
 | 参数与阈值生效 | 三参数和两路阈值各自saved/applied、版本并发、PLC写入/回读与真实回执 | PENDING保留旧确认值，APPLIED需真实生效证据；部分写入不伪装两路成功 |
 | 急停执行反馈 | 将请求受理、写应答和实际停止事实分别关联 | 不把本地命令SUCCEEDED或M2未经确认的变化当作M50实际执行成功 |
 | 后台导出 | 任务表、导出列表、一致快照、流式CSV/ZIP、完整发布与下载 | 导出完整筛选范围，不只当前10条；失败不下载半文件，关闭页面不丢任务 |
-| 新Controller与权限 | 按规范新增DTO/路由/表示转换、系统授权、身份和错误响应 | 新路径实际受保护，未就绪不返回伪空成功；操作者只取登录账号 |
+| Controller后续业务接入 | 26个入口/DTO/新路径保护已实现；16个明确未就绪的方法仍需接入真实业务 | 新路径实际受保护，未就绪不返回伪空成功；操作者只取登录账号 |
 | 容量、恢复和现场验收 | 实测采样量、写入/查询负载、磁盘增长、备份恢复及故障场景 | 用实际数据支撑长期保留方案，能核对故障前后记录/原始/统计的一致性 |
 
-本轮[Controller清单](controller-api-specification.md)已覆盖输入、返回、权限和服务路径，但这份清单本身不是代码完成证明。
+本轮[Controller清单](controller-api-specification.md)已落为路由和输入/返回类型；[接入状态](page-controller-implementation.md)区分10个连接现有能力的方法和16个未就绪方法。
 
 ## 4. 接口和数据库分别到哪一步
 
-当前Java有三个主要业务Controller：
+当前Java保留旧CleaningController的7个设备方法及UserController的6个管理员方法。新页面目标共26个方法，组成如下：
 
-| 当前Controller | 方法数 | 当前地址 |
+| Controller | 目标方法数 | 当前阶段 |
 |---|---:|---|
-| CleaningController | 7 | `/api/cleaning/devices/{deviceId}/...` |
-| AuthController | 4 | `/api/auth/...` |
-| UserController | 6 | `/api/admin/user/...` |
+| AuthController | 4 | 已适配账号/令牌响应及私有入口鉴权 |
+| ReadOnlyUserController | 1 | 只读分页、实际权限和UNKNOWN登录历史 |
+| CommandCenterController | 13 | 首页/SSE/急停/命令/参数同步状态5个连接现有能力；其余8个明确未就绪 |
+| AlarmEventController | 4 | 路由与契约完成，事件业务未接通 |
+| DataExportController | 4 | 路由与契约完成，任务/文件业务未接通 |
 
-新方案是**17个页面方法＋9个补充方法，共26个方法/路径组合**。其中4个Auth地址已经存在，但目标字段、有效期单位和保护尚需适配；其余22个目标路径尚未实现。旧清洗接口已有可复用基础，不能把“新地址未实现”理解为底层通信和命令全部没写。
-
-当前明确的对接差距包括：
-
-- 当前login的expiresIn返回毫秒，新前端按秒消费；refresh当前只返回token。
-- 旧写接口可能返回HTTP202且body.code=202，新页面目标成功业务码固定200，并在data表达受理阶段。
-- 当前deviceId/kg/STANDBY/NON_NULL需要映射为页面systemCode/t/IDLE/显式null。
-- 新`/api/command-center/**`、`/api/users`等不能沿用现有permitAll回退；账号状态、权限和系统归属需实际完成。
-- 当前用户资料缺乏真实登录时间来源时，必须表达UNKNOWN，不能用null冒充“从未登录”。
+新页面成功业务码固定200，HTTP202仅说明受理。页面身份、t/IDLE/null、秒有效期及登录历史UNKNOWN已在表示层适配；旧设备协议保持原行为。systemCode映射和账号允许名单需要真实外部配置，默认不生成系统或开放写入。
 
 [schema.sql](../src/main/resources/schema.sql)的**仓库建表基线为7表**：账号1张、拓扑3张、旧批次历史3张。目标为10张业务表＋1张导出技术表，迁移期可能保留旧表；本轮未连接实际数据库，不断言现场数据库实际只有7张表。
 

@@ -9,4 +9,11 @@ public class CleaningSafetyServiceImpl implements CleaningSafetyService {
     @Override public void verifyRead(CleaningOperationContext context) { policy.verifyRead(context); }
     @Override public void verifyEmergencyStop(CleaningOperationContext context) { policy.verifyEmergencyStop(context); }
     @Override public void verifySettingsChange(CleaningOperationContext context) { policy.verifySettingsChange(context); }
+    @Override public void verifyPagePermission(CleaningOperationContext context, String permission) { policy.verifyPagePermission(context, permission); }
+    @Override public void verifyPageSystem(CleaningOperationContext context, com.company.project.domain.bo.page.PageSystemBo system) {
+        policy.verifyPageSystem(context, system);
+    }
+    @Override public boolean canReadPageSystem(CleaningOperationContext context, com.company.project.domain.bo.page.PageSystemBo system) {
+        return policy.canReadPageSystem(context, system);
+    }
 }

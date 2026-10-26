@@ -13,4 +13,7 @@ public interface CleaningService {
     Optional<TelemetrySample> latest(String deviceId);
     CleaningSettingsViewBo settings(String deviceId);
     Optional<CleaningCommandStatusBo> operation(String deviceId, String requestId);
+    Optional<CleaningCommandStatusBo> operationByCommandCode(String deviceId, String commandCode);
+    com.company.project.domain.bo.page.PageSystemBo pageSystem(String systemCode);
+    java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems();
 }

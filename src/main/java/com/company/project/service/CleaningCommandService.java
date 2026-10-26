@@ -10,6 +10,7 @@ public interface CleaningCommandService {
     /** 只接收清洗服务完成业务校验并生成的命令。 */
     CleaningCommandStatusBo submit(CleaningCommand command);
     Optional<CleaningCommandStatusBo> find(String deviceId, String requestId);
+    Optional<CleaningCommandStatusBo> findByCommandCode(String deviceId, String commandCode);
     void runTimeoutCycle();
     CleaningCommandStatusBo acceptDeviceResult(PlcOperationResultBo result);
 }

@@ -13,8 +13,12 @@ public interface CleaningLobbyService {
     Optional<TelemetrySample> queryRealtime(CleaningOperationContext context);
     CleaningSettingsViewBo querySettings(CleaningOperationContext context);
     Optional<CleaningCommandStatusBo> queryOperation(CleaningOperationContext context, String requestId);
+    Optional<CleaningCommandStatusBo> queryOperationByCommandCode(CleaningOperationContext context, String commandCode);
     void acceptDeviceSnapshot(com.company.project.domain.bo.plc.PlcDeviceSnapshotBo snapshot);
     void acceptDeviceWriteResult(com.company.project.domain.bo.plc.PlcOperationResultBo result);
     void acceptHistoryBatch(com.company.project.domain.bo.telemetry.TelemetryBatchBo batch);
     com.company.project.domain.bo.statistics.CleaningStatisticsBo queryStatistics(CleaningOperationContext context);
+    com.company.project.domain.bo.page.PageSystemBo pageSystem(CleaningOperationContext context,
+            String systemCode, String permission);
+    java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems(CleaningOperationContext context);
 }

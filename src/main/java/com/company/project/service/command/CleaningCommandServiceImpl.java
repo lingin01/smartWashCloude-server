@@ -19,6 +19,10 @@ public class CleaningCommandServiceImpl implements CleaningCommandService {
     @Override public Optional<CleaningCommandStatusBo> find(String deviceId,String requestId) {
         return state.find(requestId).filter(e->e.command().deviceId().equals(deviceId)).map(CommandState.Entry::status);
     }
+    @Override public Optional<CleaningCommandStatusBo> findByCommandCode(String deviceId, String commandCode) {
+        return state.entries().stream().filter(e -> e.command().deviceId().equals(deviceId)
+                && e.command().commandId().equals(commandCode)).map(CommandState.Entry::status).findFirst();
+    }
     @Override public CleaningCommandStatusBo acceptDeviceResult(PlcOperationResultBo result) {
         state.applyDeviceResult(result);
         return state.find(result.operation().requestId()).orElseThrow().status();

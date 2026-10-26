@@ -12,11 +12,18 @@ public class CleaningServiceImpl implements CleaningService {
     private final DeviceManager devices;
     private final CleaningCommandService commands;
     private final CleaningStatisticsService statistics;
+    private final com.company.project.repository.device.PageSystemRegistry pageSystems;
     private final CleaningSystemState state=new CleaningSystemState();
     private final CleaningOperationPlanner operations=new CleaningOperationPlanner();
     private final CleaningDeviceConverter converter=new CleaningDeviceConverter();
     public CleaningServiceImpl(DeviceManager devices,CleaningCommandService commands,CleaningStatisticsService statistics) {
-        this.devices=devices;this.commands=commands;this.statistics=statistics;
+        this(devices, commands, statistics, new com.company.project.repository.device.PageSystemRegistry(
+                new com.company.project.config.PageAccessProperties()));
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public CleaningServiceImpl(DeviceManager devices, CleaningCommandService commands, CleaningStatisticsService statistics,
+            com.company.project.repository.device.PageSystemRegistry pageSystems) {
+        this.devices=devices;this.commands=commands;this.statistics=statistics;this.pageSystems=pageSystems;
     }
     @Override public void acceptDeviceSnapshot(PlcDeviceSnapshotBo snapshot) {
         devices.recordSnapshot(snapshot);
@@ -33,4 +40,14 @@ public class CleaningServiceImpl implements CleaningService {
     @Override public Optional<TelemetrySample> latest(String deviceId) { return state.latest(deviceId); }
     @Override public CleaningSettingsViewBo settings(String deviceId) { return state.settings(deviceId); }
     @Override public Optional<CleaningCommandStatusBo> operation(String deviceId,String requestId) { return commands.find(deviceId,requestId); }
+    @Override public Optional<CleaningCommandStatusBo> operationByCommandCode(String deviceId, String commandCode) {
+        return commands.findByCommandCode(deviceId, commandCode);
+    }
+    @Override public com.company.project.domain.bo.page.PageSystemBo pageSystem(String systemCode) {
+        if (pageSystems.all().isEmpty())
+            throw new com.company.project.domain.exception.PageApiException(503, "SYSTEM_MAPPING_NOT_READY", "页面系统公开编号尚未配置");
+        return pageSystems.find(systemCode).orElseThrow(() -> new com.company.project.domain.exception.PageApiException(
+                404, "SYSTEM_NOT_FOUND", "系统不存在"));
+    }
+    @Override public java.util.List<com.company.project.domain.bo.page.PageSystemBo> pageSystems() { return pageSystems.all(); }
 }

@@ -3,6 +3,7 @@ package com.company.project.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.company.project.domain.User;
+import com.company.project.domain.AccountRoles;
 import com.company.project.repository.UserMapper;
 import com.company.project.security.JwtTokenProvider;
 import com.company.project.service.UserService;
@@ -31,7 +32,7 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BadCredentialsException("用户名或密码错误");
         }
-        if (user.getStatus() != null && user.getStatus() == 0) {
+        if (!Integer.valueOf(1).equals(user.getStatus())) {
             throw new BadCredentialsException("账户已被禁用");
         }
         if (!passwordEncoder.matches(password, user.getPassword())) {
@@ -54,10 +55,16 @@ public class UserServiceImpl implements UserService {
     public Page<User> page(int page, int size, String keyword) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(User::getUsername, keyword)
-                    .or().like(User::getRealName, keyword));
+            String term = keyword.strip();
+            var matchingRoles = AccountRoles.matchingCodes(term);
+            wrapper.and(w -> {
+                w.like(User::getUsername, term)
+                        .or().like(User::getRealName, term)
+                        .or().like(User::getRoleCode, term);
+                if (!matchingRoles.isEmpty()) w.or().in(User::getRoleCode, matchingRoles);
+            });
         }
-        wrapper.orderByDesc(User::getCreateTime);
+        wrapper.orderByDesc(User::getCreateTime, User::getId);
         return userMapper.selectPage(new Page<>(page, size), wrapper);
     }
 
